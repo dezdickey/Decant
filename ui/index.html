@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src http://127.0.0.1:*">
+<title>Offload</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Cpath d='M16 22V9M10 14l6-6 6 6' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app" id="app" hidden>
+  <header class="top">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M16 22V9M10 14l6-6 6 6"/></svg>
+      <div>
+        <h1>Offload</h1>
+        <p class="tagline">Move files to the cloud, check every one, then free the space.</p>
+      </div>
+    </div>
+    <div class="top-right">
+      <span class="pill" id="conn"><i class="dot"></i><span id="conn-text">Connecting…</span></span>
+      <button class="btn ghost small" id="btn-quit" type="button" title="Stop Offload's background server">Stop server</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="route">
+      <article class="card side" id="from" aria-labelledby="from-h">
+        <header class="card-head"><span class="step">1</span><h2 id="from-h">From this computer</h2></header>
+        <div class="field">
+          <input id="src-path" type="text" spellcheck="false" autocomplete="off" placeholder="A folder, e.g. E:\Videos" aria-label="Folder to upload">
+          <button class="btn" id="src-browse" type="button">Browse</button>
+        </div>
+        <div class="meter" id="src-disk" hidden></div>
+        <p class="sum" id="src-sum"></p>
+      </article>
+
+      <div class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+
+      <article class="card side" id="to" aria-labelledby="to-h">
+        <header class="card-head"><span class="step">2</span><h2 id="to-h">To the cloud</h2></header>
+        <div class="field">
+          <select id="dst-remote" aria-label="Cloud"></select>
+        </div>
+        <div class="field">
+          <input id="dst-path" type="text" spellcheck="false" autocomplete="off" placeholder="Folder (blank for the top level)" aria-label="Folder in the cloud">
+          <button class="btn" id="dst-browse" type="button">Browse</button>
+        </div>
+        <div class="meter" id="dst-disk" hidden></div>
+        <p class="sum" id="dst-sum"></p>
+      </article>
+    </section>
+
+    <section class="card" id="plan" aria-labelledby="plan-h">
+      <header class="card-head"><span class="step">3</span><h2 id="plan-h">What will happen</h2></header>
+      <div id="plan-body"></div>
+      <details class="adv" id="adv">
+        <summary>Upload settings</summary>
+        <div class="adv-grid">
+          <label class="opt">
+            <span>Files at once</span>
+            <select id="opt-transfers"></select>
+            <small>Helps when there are many files. A single big file still goes up one piece at a time.</small>
+          </label>
+          <label class="opt" data-only="drive">
+            <span>Piece size</span>
+            <select id="opt-chunk">
+              <option value="64M">64 MB</option>
+              <option value="128M">128 MB</option>
+              <option value="256M">256 MB</option>
+              <option value="512M">512 MB</option>
+            </select>
+            <small>Bigger pieces mean fewer pauses between them. Uses this much memory for each file going up at once.</small>
+          </label>
+          <label class="opt">
+            <span>Speed cap</span>
+            <input id="opt-bw" type="text" spellcheck="false" placeholder="No cap">
+            <small>Leaves room for the rest of your internet. <code>5M</code> is 5 megabytes a second.</small>
+          </label>
+          <label class="opt check" data-only="drive">
+            <input type="checkbox" id="opt-limit">
+            <span>Stop cleanly at the daily upload allowance, so you can carry on tomorrow</span>
+          </label>
+        </div>
+      </details>
+      <div class="actions">
+        <button class="btn primary big" id="btn-start" type="button" disabled>Start upload</button>
+      </div>
+    </section>
+
+    <section class="card" id="run" aria-labelledby="run-h" hidden>
+      <header class="card-head">
+        <span class="step">4</span><h2 id="run-h">Uploading</h2>
+        <button class="btn ghost small push" id="btn-stop" type="button">Stop</button>
+      </header>
+      <div class="bigbar" role="progressbar" aria-labelledby="run-h" aria-valuemin="0" aria-valuemax="100" id="run-bar"><div class="fill" id="run-fill"></div></div>
+      <div class="stats" aria-live="polite">
+        <div><b id="run-done">–</b><span id="run-of">&nbsp;</span></div>
+        <div><b id="run-speed">–</b><span id="run-mbit">&nbsp;</span></div>
+        <div><b id="run-eta">–</b><span id="run-eta-l">left</span></div>
+        <div><b id="run-files">–</b><span id="run-files-l">files</span></div>
+      </div>
+      <svg class="spark" id="run-spark" viewBox="0 0 300 36" preserveAspectRatio="none" aria-hidden="true"><polyline points=""/></svg>
+      <ul class="xfers" id="run-xfers"></ul>
+      <div class="note" id="run-note" hidden></div>
+    </section>
+
+    <section class="card" id="verify" aria-labelledby="verify-h">
+      <header class="card-head"><span class="step">5</span><h2 id="verify-h">Check, then free up space</h2></header>
+      <p class="lead">Offload compares every file with its copy in the cloud using checksums. Only files that match exactly can be removed from this computer.</p>
+      <div id="verify-body"></div>
+      <div class="actions">
+        <button class="btn" id="btn-verify" type="button" disabled>Check the cloud copies</button>
+        <button class="btn danger" id="btn-free" type="button" disabled>Free up space…</button>
+      </div>
+    </section>
+
+    <section class="card quiet" id="history" aria-labelledby="hist-h" hidden>
+      <header class="card-head"><h2 id="hist-h">Recent</h2></header>
+      <ul class="hist" id="hist-list"></ul>
+    </section>
+  </main>
+
+  <footer class="foot">
+    Runs on this computer. Your files go only to the cloud you pick, through
+    <a href="https://rclone.org" target="_blank" rel="noopener noreferrer">rclone</a>, and nothing else is sent anywhere.
+  </footer>
+</div>
+
+<div class="gate" id="gate" hidden>
+  <div class="card">
+    <svg class="logo big" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M16 22V9M10 14l6-6 6 6"/></svg>
+    <h1>Offload isn't running</h1>
+    <p>This page works through a small server on your computer that the launcher starts. Open Offload with <code>Offload.cmd</code> on Windows, or <code>start.sh</code> on macOS and Linux, and this page opens by itself.</p>
+    <p class="muted" id="gate-detail"></p>
+    <button class="btn" id="gate-retry" type="button">Try again</button>
+  </div>
+</div>
+
+<dialog id="dlg-browse" aria-labelledby="browse-h">
+  <form method="dialog" class="dlg">
+    <header class="dlg-head">
+      <h2 id="browse-h">Choose a folder</h2>
+      <button class="btn ghost small" value="cancel" type="submit" aria-label="Close">✕</button>
+    </header>
+    <nav class="crumbs" id="browse-crumbs" aria-label="Path"></nav>
+    <ul class="dirs" id="browse-list"></ul>
+    <footer class="dlg-foot">
+      <span class="muted" id="browse-note"></span>
+      <button class="btn" value="cancel" type="submit">Cancel</button>
+      <button class="btn primary" id="browse-pick" value="pick" type="submit">Use this folder</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog id="dlg-free" aria-labelledby="free-h">
+  <form method="dialog" class="dlg">
+    <header class="dlg-head">
+      <h2 id="free-h">Free up space</h2>
+      <button class="btn ghost small" value="cancel" type="submit" aria-label="Close" id="free-x">✕</button>
+    </header>
+    <p id="free-lead"></p>
+    <div class="free-tools"><label class="check"><input type="checkbox" id="free-all" checked> All</label><span class="muted" id="free-total"></span></div>
+    <ul class="pick" id="free-list"></ul>
+    <p class="warn-box" id="free-warn"></p>
+    <label class="check strong"><input type="checkbox" id="free-ok"> I understand these files are deleted from this computer for good</label>
+    <div class="free-progress" id="free-progress" hidden><div class="bigbar"><div class="fill" id="free-fill"></div></div><span id="free-status"></span></div>
+    <footer class="dlg-foot">
+      <span></span>
+      <button class="btn" value="cancel" type="submit" id="free-cancel">Cancel</button>
+      <button class="btn danger" id="free-go" type="button" disabled>Delete</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog id="dlg-ask" aria-labelledby="ask-h">
+  <form method="dialog" class="dlg small">
+    <h2 id="ask-h"></h2>
+    <p id="ask-text"></p>
+    <footer class="dlg-foot">
+      <span></span>
+      <button class="btn" value="no" type="submit">Cancel</button>
+      <button class="btn primary" value="yes" type="submit" id="ask-yes">OK</button>
+    </footer>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="session.js"></script>
+<script src="format.js"></script>
+<script src="rc.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
