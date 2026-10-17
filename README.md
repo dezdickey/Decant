@@ -97,13 +97,25 @@ ui/style.css     all styling; light and dark from the system setting
 ui/app.js        the app: state, rendering, jobs, folder browser
 ui/rc.js         the API client, and the table that explains rclone's errors
 ui/format.js     sizes, speeds and durations in words
+tests/index.html tests for format.js and rc.js: open it in a browser
+docs/            the screenshots in this README
 ```
 
 ## How it was tested
 
 Every step was driven in a real browser against an isolated rclone config, never a real cloud account. The "cloud" was a folder on a second disk, reached three ways: a plain local remote, an alias, and an encrypted remote. The tests covered: uploading new, existing and changed files under a speed cap so progress could be watched; reloading the page mid-upload; the checksum check; freeing space with one file edited after the check (it was kept); a size-only comparison (deleting stayed locked); a mistyped folder; the folder browser; phone width; light and dark; and stopping the server. Separately, the page was loaded straight from disk in headless Chrome, to confirm that the security policy and the cross-origin requests behave as intended there.
 
-There is no automated test suite yet. `format.js` and `rc.js` have no DOM in them on purpose, so they are the first candidates.
+`format.js` and `rc.js` have no DOM in them on purpose, so they are tested on their own by **`tests/index.html`**, a page with no dependencies and no server. It checks every number format at its edges (zero, missing, negative, unit boundaries, the rates rclone accepts) and sends each rule in the error table a sample of the error it is there for: captured from rclone wherever the error can be caused locally, and written in Google's error format for the ones that need a real account. Some samples also check the order of the rules, since the first match wins. That found a real bug: rclone reports an unknown remote as `didn't find section in config file`, which the page used to explain as broken settings.
+
+Open it in any browser to see each result. To run it headless, pass Chrome the page's full path and a throwaway profile folder, then read the title, which says `Offload tests: N passed, 0 failed`:
+
+```
+# Windows (PowerShell)
+& "$env:ProgramFiles\Google\Chrome\Application\chrome.exe" --headless=new --user-data-dir="$env:TEMP\offload-tests" --virtual-time-budget=3000 --dump-dom "$PWD\tests\index.html" | Select-String '<title>'
+
+# macOS and Linux (use google-chrome, chromium, or the full path to Chrome)
+google-chrome --headless=new --user-data-dir="$(mktemp -d)" --virtual-time-budget=3000 --dump-dom "$PWD/tests/index.html" | grep -o '<title>[^<]*'
+```
 
 ---
 

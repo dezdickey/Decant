@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offload tests: running</title>
+<style>
+  :root { color-scheme: light dark; --ok: #15803d; --bad: #b91c1c; --muted: #6b7280; }
+  @media (prefers-color-scheme: dark) { :root { --ok: #4ade80; --bad: #f87171; --muted: #9ca3af; } }
+  body { font: 14px/1.5 system-ui, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 20px 0 4px; }
+  .sum { margin: 0 0 12px; font-weight: 600; }
+  .sum.ok { color: var(--ok); } .sum.bad { color: var(--bad); }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { padding: 1px 0; overflow-wrap: anywhere; }
+  li::before { display: inline-block; width: 1.4em; }
+  li.ok::before { content: '✓'; color: var(--ok); }
+  li.bad::before { content: '✗'; color: var(--bad); }
+  li.bad { color: var(--bad); }
+  code { font: 13px ui-monospace, Consolas, monospace; }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<h1>Offload tests</h1>
+<p class="muted">Checks <code>ui/format.js</code> and <code>ui/rc.js</code>, which have no DOM in them on purpose. Needs no server: open this file in a browser. The result is also in the page title, for running it headless.</p>
+<p class="sum" id="sum">Running…</p>
+<div id="out"></div>
+
+<script src="../ui/format.js"></script>
+<script src="../ui/rc.js"></script>
+<script>
+'use strict';
+(async () => {
+  const results = [];
+  let group = '';
+  const show = (v) => typeof v === 'string' ? JSON.stringify(v) : Object.is(v, -0) ? '-0' : String(v);
+  const eq = (got, want, what) => results.push({ group, what, ok: Object.is(got, want), got, want });
+  const threw = (e) => results.push({ group, what: 'threw ' + (e && e.message || e), ok: false, got: e && e.stack || String(e), want: 'no exception' });
+  async function section(name, fn) {
+    group = name;
+    try { await fn(); } catch (e) { threw(e); }
+  }
+
+  const KB = 1024, MB = KB ** 2, GB = KB ** 3, TB = KB ** 4, PB = KB ** 5;
+  const DASH = '\u2013';   // what the page shows for "no figure"
+
+  await section('Fmt.bytes', () => {
+    for (const [n, want] of [
+      [0, '0 B'], [1023, '1023 B'], [512.6, '513 B'],
+      [KB, '1.00 KB'], [1536, '1.50 KB'], [10 * KB, '10.0 KB'], [100 * KB, '100 KB'],
+      [19293184, '18.4 MB'], [9 * MB, '9.00 MB'],
+      [GB, '1.00 GB'], [750 * GB, '750 GB'], [1.82 * TB, '1.82 TB'], [PB, '1.00 PB'],
+      [1024 * PB, '1024 PB'],   // there is no unit past PB, so it keeps counting
+      [null, DASH], [undefined, DASH], [NaN, DASH], [Infinity, DASH], [-1, DASH],
+    ]) eq(Fmt.bytes(n), want, 'bytes(' + show(n) + ')');
+  });
+
+  await section('Fmt.speed', () => {
+    for (const [n, want] of [
+      [512, '512 B/s'], [KB, '1.00 KB/s'], [5 * MB, '5.00 MB/s'],
+      [0, DASH], [-5, DASH], [null, DASH], [NaN, DASH],
+    ]) eq(Fmt.speed(n), want, 'speed(' + show(n) + ')');
+  });
+
+  await section('Fmt.mbit', () => {
+    for (const [n, want] of [
+      [125000, '1.0 Mbit/s'], [1e6, '8.0 Mbit/s'], [1237500, '9.9 Mbit/s'],
+      [1250000, '10 Mbit/s'], [5 * MB, '42 Mbit/s'],
+      [0, ''], [-1, ''], [null, ''], [NaN, ''],
+    ]) eq(Fmt.mbit(n), want, 'mbit(' + show(n) + ')');
+  });
+
+  await section('Fmt.duration', () => {
+    for (const [s, want] of [
+      [0, '0 s'], [34, '34 s'], [59.4, '59 s'], [59.6, '1 min'],
+      [60, '1 min'], [125, '2 min'], [3599, '59 min'],
+      [3600, '1 h 0 min'], [3660, '1 h 1 min'], [86399, '23 h 59 min'],
+      [86400, '1 d 0 h'], [90000, '1 d 1 h'],
+      [null, DASH], [undefined, DASH], [NaN, DASH], [Infinity, DASH], [-1, DASH],
+    ]) eq(Fmt.duration(s), want, 'duration(' + show(s) + ')');
+  });
+
+  await section('Fmt.parseRate', () => {
+    for (const [text, want] of [
+      ['64M', 64 * MB], ['1.5G', 1.5 * GB], ['800k', 800 * KB], ['2T', 2 * TB],
+      ['5M', 5 * MB], ['5m', 5 * MB], ['5MB', 5 * MB], ['5MiB', 5 * MB], [' 5 M ', 5 * MB],
+      ['10', 10 * KB],   // no unit means KiB, the way rclone's --bwlimit reads it
+      ['0', 0],
+      ['', null], [null, null], [undefined, null], ['fast', null], ['M', null],
+      ['-5M', null], ['5X', null], ['1.5.2M', null],
+    ]) eq(Fmt.parseRate(text), want, 'parseRate(' + show(text) + ')');
+  });
+
+  await section('Fmt.base', () => {
+    for (const [p, want] of [
+      ['E:\\Footage\\clip-01.mp4', 'clip-01.mp4'], ['Raw/take-1.mov', 'take-1.mov'],
+      ['E:\\Footage\\', 'Footage'], ['E:\\a/b\\c', 'c'], ['Cloud:Videos/2024', '2024'],
+      ['clip.mp4', 'clip.mp4'], ['E:\\', 'E:'], ['/', '/'], ['', ''],
+    ]) eq(Fmt.base(p), want, 'base(' + show(p) + ')');
+  });
+
+  await section('Fmt.count', () => {
+    eq(Fmt.count(1, 'file'), '1 file', 'one');
+    eq(Fmt.count(2, 'file'), '2 files', 'many');
+    eq(Fmt.count(0, 'file'), '0 files', 'none reads as many');
+    eq(Fmt.count(1, 'match', 'matches'), '1 match', 'one, own plural given');
+    eq(Fmt.count(3, 'match', 'matches'), '3 matches', 'own plural');
+  });
+
+  await section('Fmt.ago', () => {
+    // Older times are written in the browser's locale, so only these two are fixed.
+    const now = Date.now();
+    eq(Fmt.ago(now), 'just now', 'now');
+    eq(Fmt.ago(now - 59 * 1000), 'just now', '59 s ago');
+    eq(Fmt.ago(now - 5 * 60 * 1000), '5 min ago', '5 min ago');
+    eq(Fmt.ago(now - 59 * 60 * 1000), '59 min ago', '59 min ago');
+  });
+
+  // Every rule in RC.explain, each with an error it is there for. "rclone" samples
+  // were captured from rclone 1.75.1; "Google" ones follow the googleapi error
+  // format ("googleapi: Error <code>: <message>, <reason>"), since they need a real
+  // account to provoke. The first matching rule wins, so a few samples check that
+  // a specific rule is not swallowed by a general one listed later.
+  const T = {
+    stopped: 'Offload\'s server has stopped',
+    slow: 'No answer in time',
+    daily: 'Today\'s upload limit is reached',
+    full: 'The cloud is full',
+    rate: 'The cloud is asking rclone to slow down',
+    signin: 'The cloud sign-in no longer works',
+    broken: 'That cloud\'s settings in rclone are broken',
+    unknown: 'That cloud isn\'t set up in rclone',
+    nodir: 'That folder doesn\'t exist',
+    denied: 'Not allowed',
+    canceled: 'Stopped',
+    network: 'Network trouble',
+    other: 'Something went wrong',
+  };
+
+  await section('RC.explain: each rule', () => {
+    for (const [raw, title, from] of [
+      ['unreachable', T.stopped, 'this page, when fetch fails'],
+      ['timed out', T.slow, 'this page, when a call times out'],
+      ['googleapi: Error 403: The user has exceeded their daily upload limit., uploadLimitExceeded', T.daily, 'Google'],
+      ['googleapi: Error 403: The user\'s Drive storage quota has been exceeded., storageQuotaExceeded', T.full, 'Google'],
+      ['googleapi: Error 403: User rate limit exceeded., userRateLimitExceeded', T.rate, 'Google'],
+      ['429 Too Many Requests', T.rate, 'HTTP'],
+      ['couldn\'t fetch token: invalid_grant: maybe token expired? - try refreshing with "rclone config reconnect Drive:"', T.signin, 'rclone'],
+      ['googleapi: Error 401: Invalid Credentials, authError', T.signin, 'Google'],
+      ['failed to decrypt password: input too short when revealing password - is it obscured?', T.broken, 'rclone 1.75.1, crypt remote'],
+      ['didn\'t find section in config file ("Nope")', T.unknown, 'rclone 1.75.1, operations/list'],
+      ['error in ListJSON: directory not found', T.nodir, 'rclone 1.75.1, operations/list'],
+      ['The system cannot find the path specified.', T.nodir, 'rclone 1.75.1 on Windows, core/du'],
+      ['open E:\\Footage\\clip-01.mp4: Access is denied.', T.denied, 'Windows'],
+      ['googleapi: Error 403: The user does not have sufficient permissions for this file., insufficientFilePermissions', T.denied, 'Google'],
+      ['context canceled', T.canceled, 'rclone 1.75.1, job/stop'],
+      ['error in ListJSON: error listing "": failed to readDir: Get "http://nohost.invalid/": dial tcp: lookup nohost.invalid: no such host', T.network, 'rclone 1.75.1'],
+      ['dial tcp 127.0.0.1:1: connectex: No connection could be made because the target machine actively refused it.', T.network, 'rclone 1.75.1 on Windows'],
+      ['unexpected EOF', T.network, 'Go'],
+      ['something nobody planned for', T.other, 'fallback'],
+    ]) eq(RC.explain(raw).title, title, show(raw) + ' (' + from + ')');
+  });
+
+  await section('RC.explain: what it returns', () => {
+    const fallback = RC.explain('something nobody planned for');
+    eq(fallback.detail, 'something nobody planned for', 'unknown errors show rclone\'s own words as the detail');
+    eq(fallback.raw, 'something nobody planned for', 'raw is the original text');
+    const known = RC.explain('context canceled');
+    eq(typeof known.detail === 'string' && known.detail.length > 0, true, 'a matched rule has a detail of its own');
+    eq(known.raw, 'context canceled', 'and keeps the original text in raw');
+    eq(RC.explain(new RC.RcError('unreachable', 0)).title, T.stopped, 'takes an RcError');
+    eq(RC.explain(new Error('context canceled')).title, T.canceled, 'takes any Error');
+    eq(RC.explain(null).title, T.other, 'null falls back');
+    eq(RC.explain(null).raw, '', 'null has empty raw');
+    eq(RC.explain(undefined).title, T.other, 'undefined falls back');
+  });
+
+  await section('RC without a session', async () => {
+    eq(RC.has, false, 'has is false when session.js is absent');
+    eq(RC.session, null, 'session is null');
+    let err = null;
+    try { await RC.call('core/version'); } catch (e) { err = e; }
+    eq(err instanceof RC.RcError, true, 'call rejects with an RcError');
+    eq(err && err.message, 'no session', 'saying there is no session');
+    eq(err && err.status, 0, 'with status 0, like an unreachable server');
+  });
+
+  // Report: the title for headless runs, the page for people.
+  const failed = results.filter((r) => !r.ok);
+  const line = (results.length - failed.length) + ' passed, ' + failed.length + ' failed';
+  document.title = 'Offload tests: ' + line;
+  const sum = document.getElementById('sum');
+  sum.textContent = line;
+  sum.className = 'sum ' + (failed.length ? 'bad' : 'ok');
+  const out = document.getElementById('out');
+  const groups = [...new Set(results.map((r) => r.group))];
+  for (const g of groups) {
+    const h = document.createElement('h2');
+    h.textContent = g;
+    const ul = document.createElement('ul');
+    for (const r of results.filter((x) => x.group === g)) {
+      const li = document.createElement('li');
+      li.className = r.ok ? 'ok' : 'bad';
+      li.textContent = r.what + (!r.ok ? ': got ' + show(r.got) + ', want ' + show(r.want)
+        : typeof r.want === 'boolean' ? '' : ' → ' + show(r.want));
+      ul.append(li);
+    }
+    out.append(h, ul);
+  }
+})();
+</script>
+</body>
+</html>
