@@ -117,6 +117,10 @@ Open it in any browser to see each result. To run it headless, pass Chrome the p
 google-chrome --headless=new --user-data-dir="$(mktemp -d)" --virtual-time-budget=3000 --dump-dom "$PWD/tests/index.html" | grep -o '<title>[^<]*'
 ```
 
+## Licence
+
+Offload is licensed under the [Apache License 2.0](LICENSE). rclone, which Offload runs but does not include, is MIT-licensed.
+
 ---
 
 Offload is not affiliated with or endorsed by Google or the rclone project. Google Drive is a trademark of Google LLC.
