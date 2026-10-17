@@ -453,9 +453,10 @@
         match: true, differ: true, missingOnDst: true, error: true,
         _async: true,
       });
+      const files = snap.list || [];
       watch({ kind: 'check', id: r.jobid, exec: r.executeId, src: state.src, dst: dstFs(), remote: state.dst.remote,
-        label: dstLabel(), started: Date.now(),
-        snap: (snap.list || []).map((f) => [f.Path, f.Size, f.ModTime]) });
+        label: dstLabel(), started: Date.now(), hintBytes: files.reduce((a, f) => a + f.Size, 0),
+        snap: files.map((f) => [f.Path, f.Size, f.ModTime]) });
     } catch (e) {
       const x = RC.explain(e);
       toast(x.title + '. ' + x.detail);
@@ -530,8 +531,10 @@
       frac = total ? (stats.checks || 0) / total : 0;
       $('run-done').textContent = (stats.checks || 0).toLocaleString();
       $('run-of').textContent = 'of ' + (total ? total.toLocaleString() : '…') + ' checked';
-      $('run-speed').textContent = Fmt.bytes(stats.bytes || 0);
-      $('run-mbit').textContent = 'read';
+      // rclone does not count the bytes it reads to hash local files, so show
+      // how much is being compared instead.
+      $('run-speed').textContent = Fmt.bytes(job.hintBytes || 0);
+      $('run-mbit').textContent = 'compared';
       $('run-eta').textContent = Fmt.duration(st.finished ? st.duration : stats.elapsedTime);
       $('run-eta-l').textContent = st.finished ? 'took' : 'so far';
       $('run-files').textContent = (stats.errors || 0).toLocaleString();
@@ -546,7 +549,8 @@
 
     // speed over the last few minutes
     const line = $('run-spark').firstElementChild;
-    $('run-spark').hidden = !copy || speeds.length < 2;
+    // SVG elements have no `hidden` property, only the attribute.
+    $('run-spark').toggleAttribute('hidden', !copy || speeds.length < 2);
     if (copy && speeds.length > 1) {
       const max = Math.max(...speeds) || 1;
       line.setAttribute('points', speeds.map((v, i) => (i / (speeds.length - 1) * 300).toFixed(1) + ',' + (34 - v / max * 32).toFixed(1)).join(' '));
@@ -599,16 +603,21 @@
         const x = RC.explain(st.error || 'unknown');
         note = noteBox('bad', x.title, x.detail);
       } else {
+        // With no hash in common rclone compares sizes only and reports the
+        // hash as the word "none", which must not read as a real checksum.
+        const hash = out.hashType && out.hashType !== 'none' ? out.hashType : '';
         const result = {
-          key: job.src + '\n' + job.dst, at: Date.now(), hash: out.hashType || '',
+          key: job.src + '\n' + job.dst, at: Date.now(), hash,
           match: out.match || [], differ: out.differ || [], missing: out.missingOnDst || [], errors: out.error || [],
           snap: job.snap || [],
         };
         store.set('check', result);
         loadCheck();
         ok = !result.differ.length && !result.missing.length && !result.errors.length;
-        note = ok
-          ? noteBox('ok', 'Every file matches', Fmt.count(result.match.length, 'file') + ' compared' + (result.hash ? ' by ' + result.hash.toUpperCase() + ' checksum' : ' by size') + '.')
+        note = ok && result.hash
+          ? noteBox('ok', 'Every file matches', Fmt.count(result.match.length, 'file') + ' compared by ' + result.hash.toUpperCase() + ' checksum.')
+          : ok
+          ? noteBox('warn', 'The sizes match', 'This cloud and your disk have no checksum in common, so only sizes could be compared. That is not proof the contents are the same.')
           : noteBox('warn', 'Some files do not match', 'See below. Uploading again sends whatever is missing or different.');
         addHistory({ kind: 'check', ok, src: job.src, dst: job.label, files: result.match.length, secs: st.duration || 0,
           err: ok ? '' : (result.differ.length + result.missing.length + result.errors.length) + ' not matching' });
@@ -672,7 +681,7 @@
   function freeBlocker() {
     const c = state.check;
     if (!c || !c.match.length) return 'Check the copies first.';
-    if (!c.hash) return 'This cloud and your disk share no checksum, so the copies could only be compared by size. Offload only frees space when every byte has been compared.';
+    if (!c.hash || c.hash === 'none') return 'This cloud and your disk share no checksum, so the copies could only be compared by size. Offload only frees space when every byte has been compared.';
     const home = localHome(state.dst.remote, state.dst.path, 0);
     if (home.unsure) return 'Offload cannot tell where this remote keeps its files, so it will not delete anything for it.';
     if (home.path != null) {
@@ -693,9 +702,11 @@
     $('btn-free').disabled = busy || !state.online || !!freeBlocker();
     if (!c) { body.replaceChildren(); return; }
     const list = (items) => el('ul', null, items.slice(0, 300).map((p) => el('li', { text: p })));
+    const hashed = c.hash && c.hash !== 'none';
     const rows = [
-      el('div', { class: 'row' }, el('span', { class: 'badge there', text: '✓ ' + c.match.length.toLocaleString() + ' match' }),
-        el('span', { class: 'muted', text: 'Checked ' + Fmt.ago(c.at) + (c.hash ? ', by ' + c.hash.toUpperCase() + ' checksum' : ', by size only') })),
+      el('div', { class: 'row' },
+        el('span', { class: 'badge ' + (hashed ? 'there' : 'differs'), text: (hashed ? '✓ ' : '') + c.match.length.toLocaleString() + (hashed ? ' match' : ' same size') }),
+        el('span', { class: 'muted', text: 'Checked ' + Fmt.ago(c.at) + (hashed ? ', by ' + c.hash.toUpperCase() + ' checksum' : ', by size only') })),
     ];
     if (c.differ.length) rows.push(el('details', null, el('summary', null, el('span', { class: 'badge bad', text: c.differ.length + ' differ' }), ' the cloud copy is not the same'), list(c.differ)));
     if (c.missing.length) rows.push(el('details', null, el('summary', null, el('span', { class: 'badge differs', text: c.missing.length + ' missing' }), ' not in the cloud yet'), list(c.missing)));
@@ -777,8 +788,9 @@
     $('free-cancel').textContent = 'Close';
     addHistory({ kind: 'free', ok: !failed, src: state.src, dst: dstLabel(), bytes: freed, files: done,
       err: failed ? failed + ' could not be deleted' : skipped ? skipped + ' changed and were kept' : '' });
-    // What was deleted can no longer be freed again.
-    const gone = new Set(picked.filter((b) => /deleted/.test(b.closest('li').querySelector('.st').textContent)).map((b) => b.dataset.path));
+    // What was deleted cannot be freed again, and what changed needs checking
+    // again before it can be.
+    const gone = new Set(picked.filter((b) => /deleted|changed/.test(b.closest('li').querySelector('.st').textContent)).map((b) => b.dataset.path));
     c.match = c.match.filter((p) => !gone.has(p));
     store.set('check', c);
     toast('Freed ' + Fmt.bytes(freed) + ' on this computer.');
@@ -802,7 +814,7 @@
       const what = h.kind === 'check'
         ? Fmt.count(h.files || 0, 'file') + ' against ' + h.dst
         : h.kind === 'free'
-          ? Fmt.bytes(h.bytes) + ' from ' + h.src + ' (' + Fmt.count(h.files || 0, 'file') + ')'
+          ? Fmt.bytes(h.bytes) + ' from ' + Fmt.base(h.src) + ' (' + Fmt.count(h.files || 0, 'file') + ')'
           : Fmt.bytes(h.bytes) + ' from ' + Fmt.base(h.src) + ' to ' + h.dst + (h.secs ? ' in ' + Fmt.duration(h.secs) : '');
       return el('li', null,
         el('span', { class: 'i ' + (h.ok ? 'ok' : 'bad'), text: h.ok ? '✓' : '!' }),
@@ -877,8 +889,15 @@
         : [el('li', null, el('div', { class: 'msg', text: 'No folders in here.' }))]));
     } catch (e) {
       if (seq !== browse.seq) return;
+      // A path typed by hand that does not exist: open the nearest one that does.
+      if (/directory not found|cannot find/i.test(e.message) && parts.length > (local ? 1 : 0)) {
+        browse.path = local ? joinLocal(parts.slice(0, -1)) : parts.slice(0, -1).join('/');
+        showDir();
+        return;
+      }
+      $('browse-pick').disabled = true;
       const x = RC.explain(e);
-      list.replaceChildren(el('li', null, el('div', { class: 'msg', text: x.title + '. ' + x.detail })));
+      list.replaceChildren(el('li', null, el('div', { class: 'msg', text: x.title + '.' })));
     }
   }
 
