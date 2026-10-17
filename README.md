@@ -6,6 +6,10 @@ Offload is a small local web app on top of [rclone](https://rclone.org). You pic
 
 No framework, no build step, no `package.json`. It is a launcher script and a page of plain HTML, CSS and JavaScript (about 1,800 lines in all), and the only dependency is rclone itself.
 
+![Offload planning an upload: the folder on this computer, the folder in the cloud, and how many files are new, already there or will be replaced](docs/plan.png)
+
+*The screenshots use a demo folder, with a second disk standing in for the cloud.*
+
 ## Why I built it
 
 I had about 200 GB of video to move to Google Drive, and it was painfully slow through the browser. The usual advice is to install Google's desktop app, but that copies every file into a cache on the system drive before uploading it, and my system drive had 2 GB free. rclone was the right tool: it uploads straight from where a file already is, in large pieces and several files at once. But it is a command line, and the step I actually cared about came after the upload. I wanted to delete the local copies to get the space back, and I only wanted to do that once I knew the cloud copies were complete.
@@ -18,7 +22,14 @@ So Offload is built around that last step.
 2. **To:** any remote you have set up in rclone, and a folder inside it. It shows the cloud's free space.
 3. **What will happen:** the two sides are compared before anything moves: what is new, what is already there and will be skipped, what has a different size and will be replaced, whether it will fit, and how long it should take at your recent speed. On Google Drive it also warns about the 750 GB a day upload limit.
 4. **Upload:** live progress with bytes, speed (in MB/s and in Mbit/s, the unit internet plans are sold in), time left, a speed graph and per-file bars. Errors are translated from rclone's wording into what happened and what to do. Close the tab and the upload carries on; open Offload again and it picks the running upload back up.
+
+   ![An upload in progress: bytes sent, speed in MB/s and Mbit/s, time left, a speed graph and a bar per file](docs/upload.png)
+
 5. **Check, then free up space:** every file is compared with its cloud copy by checksum. Only files that match exactly can be removed from the computer, and only after you confirm the list.
+
+   ![The check result: every file matches by MD5 checksum, and Free up space is now offered](docs/check.png)
+
+   <img src="docs/free.png" width="480" alt="The Free up space dialog: the matched files with their sizes, a warning that they skip the Recycle Bin, and a confirmation box that must be ticked before Delete works">
 
 ## Getting started
 
