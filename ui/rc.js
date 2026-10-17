@@ -65,12 +65,14 @@ const RC = (() => {
     [/invalid_grant|Invalid Credentials|token.*(expired|revoked)|unauthenticated|401/i,
       'The cloud sign-in no longer works',
       'Access was removed or has expired. In a terminal, run rclone config reconnect followed by the remote\'s name and a colon, then try again.'],
-    [/failed to decrypt password|is it obscured|couldn't (read|parse) config|config file/i,
-      'That cloud\'s settings in rclone are broken',
-      'rclone could not read them. Fix or recreate it with rclone config.'],
+    // rclone says "didn't find section in config file", so this goes before
+    // the broken-settings rule, which matches "config file".
     [/didn't find section in config|unknown remote|not found in config/i,
       'That cloud isn\'t set up in rclone',
       'Pick another one, or set it up once with rclone config.'],
+    [/failed to decrypt password|is it obscured|couldn't (read|parse) config|config file/i,
+      'That cloud\'s settings in rclone are broken',
+      'rclone could not read them. Fix or recreate it with rclone config.'],
     [/directory not found|cannot find the path|no such file or directory|cannot find the file/i,
       'That folder doesn\'t exist',
       'Check the spelling, or use Browse to pick it.'],
