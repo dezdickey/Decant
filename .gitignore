@@ -1,0 +1,3 @@
+# Written by the launcher on every run; holds that run's local password.
+ui/session.js
+logs/
