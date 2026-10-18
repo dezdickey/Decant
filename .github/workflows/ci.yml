@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Every job starts with read-only access; none needs more.
+permissions:
+  contents: read
+
+jobs:
+  interface:
+    name: Interface tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run tests/index.html in headless Chrome
+        run: |
+          title=$(google-chrome --headless=new --no-sandbox --user-data-dir="$(mktemp -d)" \
+            --virtual-time-budget=5000 --dump-dom "file://$PWD/tests/index.html" \
+            | grep -o '<title>[^<]*' | sed 's/<title>//')
+          echo "$title"
+          case "$title" in *" 0 failed") ;; *) echo "::error::interface tests failed"; exit 1 ;; esac
+
+  core:
+    name: Rust core
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          components: clippy
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri
+      - name: Fetch the bundled rclone (checksum-verified)
+        shell: bash
+        run: scripts/fetch-rclone.sh x86_64-pc-windows-msvc
+      - name: Clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Tests
+        working-directory: src-tauri
+        run: cargo test
+
+  audit:
+    name: Known vulnerabilities in dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+        with:
+          tool: cargo-audit
+      - name: cargo audit
+        working-directory: src-tauri
+        run: cargo audit
