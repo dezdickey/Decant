@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Offload",
-  "version": "2.0.0-alpha.1",
+  "version": "2.0.0",
   "identifier": "io.github.dezdickey.offload",
   "build": {
     "frontendDist": "../ui"
@@ -32,6 +32,9 @@
     "license": "Apache-2.0",
     "licenseFile": "../LICENSE",
     "externalBin": ["binaries/rclone"],
+    "resources": {
+      "../third-party/rclone-LICENSE.txt": "third-party/rclone-LICENSE.txt"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
