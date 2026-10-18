@@ -15,6 +15,11 @@ use tauri::{AppHandle, Manager, RunEvent, State, WindowEvent};
 struct Core {
     rclone: Mutex<Option<rclone::Rclone>>,
     start_error: Mutex<Option<String>>,
+    /// Background jobs (uploads and checks) started through `rc`. rclone
+    /// counts every call as a job while it runs, including the one asking
+    /// which jobs are running, so "is anything running" has to ask about
+    /// these ids, not rclone's whole list.
+    jobs: Mutex<Vec<u64>>,
 }
 
 impl Core {
@@ -36,12 +41,19 @@ async fn rc(core: State<'_, Core>, path: String, params: Value, timeout_ms: Opti
     }
     let (base, auth) = core.endpoint()?;
     let timeout = Duration::from_millis(timeout_ms.unwrap_or(30_000).clamp(1_000, 600_000));
+    let is_async = params.get("_async").and_then(Value::as_bool) == Some(true);
     let params = rclone::sanitize_params(params);
-    tauri::async_runtime::spawn_blocking(move || {
+    let reply = tauri::async_runtime::spawn_blocking(move || {
         rclone::call(&base, &auth, &path, params, timeout).map(|reply| rclone::sanitize_reply(&path, reply))
     })
     .await
-    .map_err(|e| rclone::Failure { status: 500, error: e.to_string() })?
+    .map_err(|e| rclone::Failure { status: 500, error: e.to_string() })??;
+    if is_async {
+        if let Some(id) = reply.get("jobid").and_then(Value::as_u64) {
+            core.jobs.lock().unwrap().push(id);
+        }
+    }
+    Ok(reply)
 }
 
 /// Remove one local file that has been verified in the cloud, after proving it
@@ -74,11 +86,21 @@ fn app_info(app: AppHandle, core: State<'_, Core>) -> Value {
 /// Is any upload or check still running? Decides whether closing the window
 /// quits or tucks Offload into the tray.
 fn jobs_running(app: &AppHandle) -> bool {
-    let Ok((base, auth)) = app.state::<Core>().endpoint() else { return false };
-    match rclone::call(&base, &auth, "job/list", Value::Object(Default::default()), Duration::from_secs(3)) {
-        Ok(v) => v.get("runningIds").and_then(Value::as_array).is_some_and(|a| !a.is_empty()),
-        Err(_) => false,
+    let core = app.state::<Core>();
+    let Ok((base, auth)) = core.endpoint() else { return false };
+    let ids = core.jobs.lock().unwrap().clone();
+    let mut still = Vec::new();
+    for id in ids {
+        let status = rclone::call(&base, &auth, "job/status", serde_json::json!({ "jobid": id }), Duration::from_secs(3));
+        if let Ok(v) = status {
+            if v.get("finished").and_then(Value::as_bool) == Some(false) {
+                still.push(id);
+            }
+        }
     }
+    let running = !still.is_empty();
+    *core.jobs.lock().unwrap() = still;
+    running
 }
 
 fn show_main(app: &AppHandle) {
@@ -92,7 +114,7 @@ fn show_main(app: &AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
-        .manage(Core { rclone: Mutex::new(None), start_error: Mutex::new(None) })
+        .manage(Core { rclone: Mutex::new(None), start_error: Mutex::new(None), jobs: Mutex::new(Vec::new()) })
         .invoke_handler(tauri::generate_handler![rc, free_file, app_info])
         .setup(|app| {
             let handle = app.handle().clone();
