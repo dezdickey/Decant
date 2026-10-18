@@ -74,6 +74,24 @@ Offload moves files from a computer to a cloud, checks every copy by checksum, a
 | A vulnerable or malicious crate | `Cargo.lock` is committed; `cargo audit` runs in CI; Dependabot proposes updates. |
 | A tampered build | Releases are built by GitHub Actions and carry build provenance, SHA-256 checksums and an SBOM. |
 
+## How 2.0 was attacked
+
+Each stage records what was tried against its new parts. For 2.0:
+
+| Attack | How | Result |
+|---|---|---|
+| Run a forbidden rclone call through the page's channel | Live test: `operations/purge` and `core/command` sent through the relay, with a control sending the same purge straight to rclone | Refused with 403 and never executed. The control proved the purge would have deleted the folder. |
+| Read a sign-in token through the page's channel | Live test: a remote with a planted token, read through the relay and straight from rclone | rclone returns the token; the relay returns `{"type": "drive"}` only. `config/dump` is refused. |
+| Talk to rclone without the password | Live test: a wrong password and no password | 401 both times; the real password works |
+| Reach rclone from a web page | Live test: CORS preflights from `https://evil.example`, `null` and `http://127.0.0.1` | No `Access-Control-Allow-Origin` for any of them, so browsers block the request |
+| Make the core delete outside the folder | Unit tests for `..`, absolute paths and folders, plus 4,000 generated paths mixing `..`, `.`, drive letters, UNC prefixes and both slash styles | Nothing outside the folder, and nothing containing `..`, was ever approved |
+| Leave rclone running after quitting | Manual test on Windows: quit with no job running | rclone exits with the app |
+
+**Two bugs found by testing, both fixed in 2.0:**
+
+- **A size-only check could read as a checksum match.** When the cloud and the disk share no checksum, rclone reports the hash type as the word `none`, and the page treated that as a real checksum, reporting "every file matches" after comparing sizes only. Removal stayed locked in that test only because the remote was encrypted. Size-only results are now labelled as such and can never unlock removal. (Found while testing v1.)
+- **Closing the window never quit.** The check asking what is running counted itself as a running job, so the app always believed an upload was in progress and hid in the tray. It now tracks the background jobs it started. (Found while testing the desktop app.)
+
 ## Known gaps
 
 Listed so they are not mistaken for oversights.

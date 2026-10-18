@@ -8,3 +8,6 @@ src-tauri/gen/
 # The bundled rclone is fetched and checksum-verified by scripts/fetch-rclone.sh,
 # never committed.
 src-tauri/binaries/
+
+# Private working notes (fact sheets for write-ups); not part of the project.
+notes/

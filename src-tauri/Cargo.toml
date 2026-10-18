@@ -1,6 +1,6 @@
 [package]
 name = "offload"
-version = "2.0.0-alpha.1"
+version = "2.0.0"
 description = "Move files to the cloud, prove every one arrived intact, then free the space."
 edition = "2021"
 license = "Apache-2.0"
