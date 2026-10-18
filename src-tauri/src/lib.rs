@@ -33,19 +33,14 @@ impl Core {
 }
 
 /// Relay one call to rclone. Refused unless it is on the allowlist; the
-/// request is trimmed on the way in and the reply on the way out.
+/// request is trimmed on the way in and the reply on the way out
+/// (`rclone::relay`, which the live tests drive directly).
 #[tauri::command]
 async fn rc(core: State<'_, Core>, path: String, params: Value, timeout_ms: Option<u64>) -> Result<Value, rclone::Failure> {
-    if !rclone::allowed(&path) {
-        return Err(rclone::Failure { status: 403, error: format!("{path} is not available to the interface") });
-    }
     let (base, auth) = core.endpoint()?;
     let timeout = Duration::from_millis(timeout_ms.unwrap_or(30_000).clamp(1_000, 600_000));
     let is_async = params.get("_async").and_then(Value::as_bool) == Some(true);
-    let params = rclone::sanitize_params(params);
-    let reply = tauri::async_runtime::spawn_blocking(move || {
-        rclone::call(&base, &auth, &path, params, timeout).map(|reply| rclone::sanitize_reply(&path, reply))
-    })
+    let reply = tauri::async_runtime::spawn_blocking(move || rclone::relay(&base, &auth, &path, params, timeout))
     .await
     .map_err(|e| rclone::Failure { status: 500, error: e.to_string() })??;
     if is_async {
@@ -122,7 +117,7 @@ pub fn run() {
             // Start rclone before the page asks for it.
             let log_dir = handle.path().app_log_dir()?;
             std::fs::create_dir_all(&log_dir)?;
-            let started = rclone::bundled_binary().and_then(|bin| rclone::Rclone::start(&bin, &log_dir.join("rclone.log")));
+            let started = rclone::bundled_binary().and_then(|bin| rclone::Rclone::start(&bin, &log_dir.join("rclone.log"), None));
             let core = handle.state::<Core>();
             match started {
                 Ok(r) => *core.rclone.lock().unwrap() = Some(r),
