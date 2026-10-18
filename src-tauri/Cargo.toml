@@ -1,0 +1,29 @@
+[package]
+name = "offload"
+version = "2.0.0-alpha.1"
+description = "Move files to the cloud, prove every one arrived intact, then free the space."
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/dezdickey/Offload"
+publish = false
+
+[lib]
+name = "offload_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = { version = "2", features = ["json"] }
+getrandom = "0.2"
+trash = "5.2.9"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

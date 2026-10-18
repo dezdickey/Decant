@@ -1,3 +1,10 @@
 # Written by the launcher on every run; holds that run's local password.
 ui/session.js
 logs/
+
+# Rust and Tauri build output, and the generated permission schemas.
+src-tauri/target/
+src-tauri/gen/
+# The bundled rclone is fetched and checksum-verified by scripts/fetch-rclone.sh,
+# never committed.
+src-tauri/binaries/
