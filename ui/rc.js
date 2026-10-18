@@ -1,13 +1,19 @@
 'use strict';
 // Talking to rclone's remote-control server, and explaining what it says.
 //
-// The launcher writes window.OFFLOAD_SESSION (port, user, password) into
-// session.js. Every request carries that password in an Authorization header.
-// A header like that cannot be added to a request from another website
-// without the server agreeing to it, and the server only agrees for this page.
+// Two ways in, same calls:
+// - In the desktop app, the page never sees rclone or its password. Each call
+//   goes to Offload's native core, which checks it against an allowlist and
+//   relays it.
+// - In the browser version, the launcher writes window.OFFLOAD_SESSION (port,
+//   user, password) into session.js, and every request carries that password
+//   in an Authorization header. A header like that cannot be added to a
+//   request from another website without the server agreeing to it, and the
+//   server only agrees for this page.
 
 const RC = (() => {
-  const s = window.OFFLOAD_SESSION || null;
+  const tauri = (window.__TAURI__ && window.__TAURI__.core) || null;
+  const s = tauri ? null : (window.OFFLOAD_SESSION || null);
   const base = s ? 'http://127.0.0.1:' + s.port + '/' : '';
   const auth = s ? 'Basic ' + btoa(s.user + ':' + s.pass) : '';
 
@@ -20,6 +26,13 @@ const RC = (() => {
   }
 
   async function call(path, params, opts) {
+    if (tauri) {
+      try {
+        return await tauri.invoke('rc', { path, params: params || {}, timeoutMs: (opts && opts.timeout) || 30000 });
+      } catch (e) {
+        throw new RcError((e && e.error) || String(e), (e && e.status) || 0, e);
+      }
+    }
     if (!s) throw new RcError('no session', 0);
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), (opts && opts.timeout) || 30000);
@@ -49,7 +62,9 @@ const RC = (() => {
   const RULES = [
     [/^unreachable$/,
       'Offload\'s server has stopped',
-      'This page cannot reach it. Start Offload again with Offload.cmd (or start.sh), and any upload still running carries on.'],
+      tauri
+        ? 'The part of Offload that runs rclone is not answering. Quit Offload from the tray icon and open it again.'
+        : 'This page cannot reach it. Start Offload again with Offload.cmd (or start.sh), and any upload still running carries on.'],
     [/^timed out$/,
       'No answer in time',
       'rclone is busy or the connection is slow. It will be tried again.'],
@@ -95,5 +110,11 @@ const RC = (() => {
     return { title: 'Something went wrong', detail: raw, raw };
   }
 
-  return { call, explain, RcError, session: s, has: !!s };
+  // Desktop-only: the app's version and whether rclone started, and removing a
+  // verified file, to the Recycle Bin unless `permanent` (the core checks it
+  // lies inside `root` first).
+  const info = tauri ? () => tauri.invoke('app_info') : null;
+  const free = tauri ? (root, rel, permanent) => tauri.invoke('free_file', { root, rel, permanent: !!permanent }) : null;
+
+  return { call, explain, RcError, session: s, has: !!s || !!tauri, desktop: !!tauri, info, free };
 })();

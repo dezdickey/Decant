@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src http://127.0.0.1:*">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src http://127.0.0.1:* ipc: http://ipc.localhost">
 <title>Offload</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Cpath d='M16 22V9M10 14l6-6 6 6' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
@@ -133,7 +133,7 @@
   <div class="card">
     <svg class="logo big" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M16 22V9M10 14l6-6 6 6"/></svg>
     <h1>Offload isn't running</h1>
-    <p>This page works through a small server on your computer that the launcher starts. Open Offload with <code>Offload.cmd</code> on Windows, or <code>start.sh</code> on macOS and Linux, and this page opens by itself.</p>
+    <p id="gate-text">This page works through a small server on your computer that the launcher starts. Open Offload with <code>Offload.cmd</code> on Windows, or <code>start.sh</code> on macOS and Linux, and this page opens by itself.</p>
     <p class="muted" id="gate-detail"></p>
     <button class="btn" id="gate-retry" type="button">Try again</button>
   </div>
@@ -164,8 +164,13 @@
     <p id="free-lead"></p>
     <div class="free-tools"><label class="check"><input type="checkbox" id="free-all" checked> All</label><span class="muted" id="free-total"></span></div>
     <ul class="pick" id="free-list"></ul>
+    <fieldset class="free-mode" id="free-mode" hidden>
+      <legend>How to remove them</legend>
+      <label class="check"><input type="radio" name="free-mode" value="bin" checked> <span><b>Recycle Bin</b>: they can be restored, but the space only comes back once you empty it</span></label>
+      <label class="check"><input type="radio" name="free-mode" value="permanent"> <span><b>Delete permanently</b>: the space comes back now, and they cannot be restored</span></label>
+    </fieldset>
     <p class="warn-box" id="free-warn"></p>
-    <label class="check strong"><input type="checkbox" id="free-ok"> I understand these files are deleted from this computer for good</label>
+    <label class="check strong"><input type="checkbox" id="free-ok"> <span id="free-ok-text">I understand these files are deleted from this computer for good</span></label>
     <div class="free-progress" id="free-progress" hidden><div class="bigbar"><div class="fill" id="free-fill"></div></div><span id="free-status"></span></div>
     <footer class="dlg-foot">
       <span></span>
