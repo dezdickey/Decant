@@ -121,3 +121,72 @@ mod tests {
         let _ = fs::remove_dir_all(&d);
     }
 }
+
+#[cfg(test)]
+mod properties {
+    //! Thousands of generated paths, built from the pieces most likely to
+    //! cause trouble, against one rule: whatever the input, the check never
+    //! approves a path outside the folder, and never approves one that
+    //! climbs with `..`.
+    use super::*;
+    use proptest::prelude::*;
+    use std::sync::OnceLock;
+
+    fn sandbox() -> &'static (PathBuf, PathBuf) {
+        static S: OnceLock<(PathBuf, PathBuf)> = OnceLock::new();
+        S.get_or_init(|| {
+            let dir = std::env::temp_dir().join(format!("offload-props-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(dir.join("folder/sub")).unwrap();
+            std::fs::write(dir.join("folder/a.txt"), b"a").unwrap();
+            std::fs::write(dir.join("folder/sub/b.txt"), b"b").unwrap();
+            std::fs::write(dir.join("secret.txt"), b"outside").unwrap();
+            let root = dir.join("folder");
+            let canon = root.canonicalize().unwrap();
+            (root, canon)
+        })
+    }
+
+    fn segment() -> impl Strategy<Value = String> {
+        prop_oneof![
+            Just("a.txt".to_string()),
+            Just("sub".to_string()),
+            Just("b.txt".to_string()),
+            Just("secret.txt".to_string()),
+            Just("folder".to_string()),
+            Just("..".to_string()),
+            Just(".".to_string()),
+            Just(String::new()),
+            Just("C:".to_string()),
+            Just(r"\\?".to_string()),
+            "[a-z.~]{1,5}",
+        ]
+    }
+
+    fn relative() -> impl Strategy<Value = String> {
+        (
+            prop::sample::select(vec!["", "/", r"\", "./", "../", r"C:\", r"\\server\share\"]),
+            prop::collection::vec(segment(), 1..7),
+            prop::sample::select(vec!["/", "\\"]),
+        )
+            .prop_map(|(lead, segs, sep)| format!("{lead}{}", segs.join(sep)))
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(4000))]
+
+        #[test]
+        fn never_approves_anything_outside_the_folder(rel in relative()) {
+            let (root, canon) = sandbox();
+            if let Ok(path) = resolve_inside(root.to_str().unwrap(), &rel) {
+                prop_assert!(path.starts_with(canon), "{rel:?} escaped to {path:?}");
+                prop_assert!(path != *canon, "{rel:?} resolved to the folder itself");
+                prop_assert!(path.is_file(), "{rel:?} is not a file");
+                prop_assert!(
+                    !Path::new(&rel).components().any(|c| matches!(c, Component::ParentDir)),
+                    "{rel:?} climbs with '..' yet was approved"
+                );
+            }
+        }
+    }
+}

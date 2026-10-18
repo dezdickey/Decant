@@ -121,10 +121,15 @@ pub fn bundled_binary() -> Result<PathBuf, String> {
 }
 
 impl Rclone {
-    pub fn start(binary: &Path, log_file: &Path) -> Result<Rclone, String> {
+    /// Start rclone's remote-control server. `config` overrides which rclone
+    /// config file it reads; the app passes `None` and uses rclone's own.
+    pub fn start(binary: &Path, log_file: &Path, config: Option<&Path>) -> Result<Rclone, String> {
         let port = free_port()?;
         let pass = secret()?;
         let mut cmd = Command::new(binary);
+        if let Some(c) = config {
+            cmd.arg("--config").arg(c);
+        }
         cmd.args(["rcd", "--rc-addr"])
             .arg(format!("127.0.0.1:{port}"))
             .args(["--rc-job-expire-duration", "24h", "--log-level", "INFO", "--log-file"])
@@ -175,6 +180,16 @@ impl Rclone {
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
+}
+
+/// The whole path a page request takes: refused unless allowlisted, trimmed
+/// on the way in, forwarded, trimmed on the way out. The `rc` command is a
+/// thin wrapper around this, so tests can drive exactly what the app does.
+pub fn relay(base: &str, auth: &str, path: &str, params: Value, timeout: Duration) -> Result<Value, Failure> {
+    if !allowed(path) {
+        return Err(Failure::new(403, format!("{path} is not available to the interface")));
+    }
+    call(base, auth, path, sanitize_params(params), timeout).map(|reply| sanitize_reply(path, reply))
 }
 
 pub fn call(base: &str, auth: &str, path: &str, params: Value, timeout: Duration) -> Result<Value, Failure> {
@@ -249,5 +264,144 @@ mod tests {
         assert_eq!(base64(b"fo"), "Zm8=");
         assert_eq!(base64(b"foo"), "Zm9v");
         assert_eq!(base64(b"offload:secret"), "b2ZmbG9hZDpzZWNyZXQ=");
+    }
+}
+
+#[cfg(test)]
+mod live {
+    //! Start the real rclone the way the app does, then attack the relay.
+    //! Each attack has a control: the same request sent straight to rclone,
+    //! bypassing the relay, must work, so a pass means the relay stopped it
+    //! and not that the attack was harmless anyway.
+    //!
+    //! They need the bundled binary (`scripts/fetch-rclone.sh`). Without it
+    //! they print a notice and pass, so a fresh clone can still `cargo test`;
+    //! CI always fetches it first.
+    use super::*;
+    use serde_json::json;
+
+    const T: Duration = Duration::from_secs(15);
+
+    fn binary() -> Option<PathBuf> {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("binaries");
+        std::fs::read_dir(dir).ok()?.flatten().map(|e| e.path()).find(|p| {
+            p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("rclone-"))
+        })
+    }
+
+    struct Live {
+        rc: Rclone,
+        dir: PathBuf,
+    }
+
+    impl Drop for Live {
+        fn drop(&mut self) {
+            self.rc.stop();
+            let _ = std::fs::remove_dir_all(&self.dir);
+        }
+    }
+
+    fn start(name: &str) -> Option<Live> {
+        let Some(bin) = binary() else {
+            eprintln!("skipping live test: no bundled rclone (run scripts/fetch-rclone.sh)");
+            return None;
+        };
+        let dir = std::env::temp_dir().join(format!("offload-live-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let conf = dir.join("rclone.conf");
+        // A remote with a planted token. config/get reads it without ever
+        // contacting Google.
+        std::fs::write(
+            &conf,
+            "[fake]\ntype = drive\nscope = drive\ntoken = {\"access_token\":\"PLANTED-SECRET\",\"refresh_token\":\"PLANTED-REFRESH\"}\n",
+        )
+        .unwrap();
+        let rc = Rclone::start(&bin, &dir.join("rclone.log"), Some(&conf)).expect("rclone should start");
+        Some(Live { rc, dir })
+    }
+
+    #[test]
+    fn live_allowed_calls_get_through() {
+        let Some(l) = start("allowed") else { return };
+        let (b, a) = l.rc.endpoint();
+        let v = relay(&b, &a, "core/version", json!({}), T).unwrap();
+        assert!(v.get("version").and_then(Value::as_str).is_some_and(|s| s.starts_with('v')));
+    }
+
+    #[test]
+    fn live_a_refused_call_never_reaches_rclone() {
+        let Some(l) = start("refused") else { return };
+        let (b, a) = l.rc.endpoint();
+        let victim = l.dir.join("victim");
+        std::fs::create_dir_all(&victim).unwrap();
+        std::fs::write(victim.join("keep.txt"), b"precious").unwrap();
+        let purge = json!({ "fs": victim.to_str().unwrap(), "remote": "" });
+
+        let err = relay(&b, &a, "operations/purge", purge.clone(), T).unwrap_err();
+        assert_eq!(err.status, 403);
+        assert!(victim.join("keep.txt").exists(), "a refused purge must not have run");
+
+        let marker = l.dir.join("made-by-core-command");
+        let cmd = json!({ "command": "mkdir", "arg": [marker.to_str().unwrap()] });
+        assert_eq!(relay(&b, &a, "core/command", cmd, T).unwrap_err().status, 403);
+        assert!(!marker.exists(), "a refused core/command must not have run");
+
+        // Control: sent straight to rclone, the same purge does delete.
+        call(&b, &a, "operations/purge", purge, T).expect("control purge should work");
+        assert!(!victim.exists(), "control: rclone itself would have purged the folder");
+    }
+
+    #[test]
+    fn live_sign_in_tokens_never_come_back() {
+        let Some(l) = start("tokens") else { return };
+        let (b, a) = l.rc.endpoint();
+        let raw = call(&b, &a, "config/get", json!({ "name": "fake" }), T).unwrap();
+        assert!(raw.to_string().contains("PLANTED-SECRET"), "control: rclone itself returns the token");
+
+        let relayed = relay(&b, &a, "config/get", json!({ "name": "fake" }), T).unwrap();
+        assert!(!relayed.to_string().contains("PLANTED"), "the relay must strip tokens: {relayed}");
+        assert_eq!(relayed, json!({ "type": "drive" }));
+
+        assert_eq!(relay(&b, &a, "config/dump", json!({}), T).unwrap_err().status, 403);
+    }
+
+    #[test]
+    fn live_the_wrong_password_is_refused() {
+        let Some(l) = start("auth") else { return };
+        let (b, a) = l.rc.endpoint();
+        let wrong = format!("Basic {}", base64(b"offload:not-the-password"));
+        assert_eq!(call(&b, &wrong, "core/version", json!({}), T).unwrap_err().status, 401);
+        assert_eq!(call(&b, "", "core/version", json!({}), T).unwrap_err().status, 401);
+        assert!(call(&b, &a, "core/version", json!({}), T).is_ok(), "control: the real password works");
+    }
+
+    #[test]
+    fn live_no_website_gets_cross_origin_access() {
+        let Some(l) = start("cors") else { return };
+        let (b, _) = l.rc.endpoint();
+        for origin in ["https://evil.example", "null", "http://127.0.0.1"] {
+            let res = ureq::request("OPTIONS", &format!("{b}core/version"))
+                .set("Origin", origin)
+                .set("Access-Control-Request-Method", "POST")
+                .set("Access-Control-Request-Headers", "authorization,content-type")
+                .call();
+            let allow = match &res {
+                Ok(r) => r.header("Access-Control-Allow-Origin").map(str::to_string),
+                Err(ureq::Error::Status(_, r)) => r.header("Access-Control-Allow-Origin").map(str::to_string),
+                Err(e) => panic!("rclone did not answer the preflight: {e}"),
+            };
+            assert_eq!(allow, None, "no cross-origin permission for {origin}");
+        }
+    }
+
+    #[test]
+    fn live_stopping_ends_the_server() {
+        let Some(mut l) = start("stop") else { return };
+        let (b, a) = l.rc.endpoint();
+        assert!(call(&b, &a, "core/version", json!({}), T).is_ok());
+        l.rc.stop();
+        let err = call(&b, &a, "core/version", json!({}), Duration::from_secs(3)).unwrap_err();
+        assert_eq!(err.status, 0, "nothing should answer once rclone is stopped");
     }
 }
