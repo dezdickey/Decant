@@ -23,7 +23,7 @@ If the interface were ever tricked into running someone else's script, that scri
 Option 2. It is the smallest change that makes the interface untrusted by design:
 
 - **The password never leaves the core.** It lives in memory and reaches rclone through environment variables.
-- **rclone grants no cross-origin access at all.** No web page, including Offload's own, can talk to it.
+- **rclone grants no cross-origin access at all.** No web page, including Decant's own, can talk to it.
 - **Only 14 calls are allowed.** The rest of rclone's API, including everything that deletes folders, runs commands or rewrites config, is unreachable from the page.
 - **Replies are trimmed.** `config/get` comes back with the remote's type only, so tokens never reach the page.
 

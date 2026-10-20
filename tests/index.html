@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Offload tests: running</title>
+<title>Decant tests: running</title>
 <style>
   :root { color-scheme: light dark; --ok: #15803d; --bad: #b91c1c; --muted: #6b7280; }
   @media (prefers-color-scheme: dark) { :root { --ok: #4ade80; --bad: #f87171; --muted: #9ca3af; } }
@@ -23,7 +23,7 @@
 </style>
 </head>
 <body>
-<h1>Offload tests</h1>
+<h1>Decant tests</h1>
 <p class="muted">Checks <code>ui/format.js</code> and <code>ui/rc.js</code>, which have no DOM in them on purpose. Needs no server: open this file in a browser. The result is also in the page title, for running it headless.</p>
 <p class="sum" id="sum">Running…</p>
 <div id="out"></div>
@@ -124,7 +124,7 @@
   // account to provoke. The first matching rule wins, so a few samples check that
   // a specific rule is not swallowed by a general one listed later.
   const T = {
-    stopped: 'Offload\'s server has stopped',
+    stopped: 'Decant\'s server has stopped',
     slow: 'No answer in time',
     daily: 'Today\'s upload allowance is used up',
     full: 'The cloud is full',
@@ -190,7 +190,7 @@
   // Report: the title for headless runs, the page for people.
   const failed = results.filter((r) => !r.ok);
   const line = (results.length - failed.length) + ' passed, ' + failed.length + ' failed';
-  document.title = 'Offload tests: ' + line;
+  document.title = 'Decant tests: ' + line;
   const sum = document.getElementById('sum');
   sum.textContent = line;
   sum.className = 'sum ' + (failed.length ? 'bad' : 'ok');

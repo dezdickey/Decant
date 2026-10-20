@@ -4,7 +4,7 @@
 
 ## Context
 
-Freeing space is Offload's last step: files that matched their cloud copies by checksum are removed from the computer. Version 1, as a web page, could only delete them permanently. The desktop app can use the Recycle Bin (Trash on macOS and Linux).
+Freeing space is Decant's last step: files that matched their cloud copies by checksum are removed from the computer. Version 1, as a web page, could only delete them permanently. The desktop app can use the Recycle Bin (Trash on macOS and Linux).
 
 The two goals pull against each other. The Recycle Bin makes a mistake recoverable, but files in it still take up space until it is emptied, and getting space back is the reason to remove them at all.
 

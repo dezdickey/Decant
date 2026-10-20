@@ -2,7 +2,7 @@
 
 **Version:** 2.0 (desktop app). Updated at every stage; see the roadmap.
 
-Offload moves files from a computer to a cloud, checks every copy by checksum, and can then remove the local originals. That last step is why this document exists: a tool that deletes files on the strength of a check has to be hard to trick.
+Decant moves files from a computer to a cloud, checks every copy by checksum, and can then remove the local originals. That last step is why this document exists: a tool that deletes files on the strength of a check has to be hard to trick.
 
 ## What is worth protecting
 
@@ -20,8 +20,8 @@ Offload moves files from a computer to a cloud, checks every copy by checksum, a
 - **Content shown in the app**, for example a file named to look like markup, trying to run script in the interface. In scope.
 - **Another user account on the same computer**, which can reach the loopback port. In scope.
 - **A compromised dependency or build step**, meaning the supply chain. In scope.
-- **Someone on the network.** In scope for cloud traffic, which rclone protects with TLS. Offload listens only on 127.0.0.1.
-- **Malware running as the same user.** **Out of scope**, and stated plainly: it can already read rclone's config file and every file Offload could touch, so no app-level control holds against it. 2.3 encrypts the config at rest, which raises the cost of reading tokens off a stolen disk, not of malware already running.
+- **Someone on the network.** In scope for cloud traffic, which rclone protects with TLS. Decant listens only on 127.0.0.1.
+- **Malware running as the same user.** **Out of scope**, and stated plainly: it can already read rclone's config file and every file Decant could touch, so no app-level control holds against it. 2.3 encrypts the config at rest, which raises the cost of reading tokens off a stolen disk, not of malware already running.
 
 ## Architecture and trust boundaries
 
@@ -41,7 +41,7 @@ Offload moves files from a computer to a cloud, checks every copy by checksum, a
 ### B1: Interface to core
 | Threat | How it would look | Mitigation in 2.0 |
 |---|---|---|
-| **Elevation** | Script injected into the page calls powerful functions | The build manifest and capability grant only `rc`, `free_file` and `app_info`; Tauri refuses anything else before it reaches Offload. A strict CSP allows script only from the app's own files. `freezePrototype` blocks prototype-pollution tricks. File names are always inserted as text, never as HTML. |
+| **Elevation** | Script injected into the page calls powerful functions | The build manifest and capability grant only `rc`, `free_file` and `app_info`; Tauri refuses anything else before it reaches Decant. A strict CSP allows script only from the app's own files. `freezePrototype` blocks prototype-pollution tricks. File names are always inserted as text, never as HTML. |
 | **Elevation** | The page asks rclone for something dangerous | `rc` accepts only an allowlist of 14 calls. Absent on purpose: `core/command` (runs any rclone command), `operations/purge` and `delete`, `deletefile`, every config write or dump, and `core/quit`. |
 | **Information disclosure** | The page reads sign-in tokens | `config/get` replies are cut down to the remote's type (and an alias's target) before the page sees them. |
 | **Tampering** | The page widens a request, for example by redirecting rclone's config through `_config` | `_config` is trimmed to `Transfers`, clamped to 1–16. |
@@ -98,11 +98,11 @@ Listed so they are not mistaken for oversights.
 
 | Gap | Why it is open | Planned |
 |---|---|---|
-| rclone's config, holding the tokens, is plain text on disk | 2.0 reuses the user's existing rclone config rather than copying tokens into a second plain-text file | 2.3 encrypts Offload's own config, with the key in the OS keychain |
+| rclone's config, holding the tokens, is plain text on disk | 2.0 reuses the user's existing rclone config rather than copying tokens into a second plain-text file | 2.3 encrypts Decant's own config, with the key in the OS keychain |
 | Run history can be edited | It is a convenience list kept in the webview's storage | 2.1: a signed, hash-chained log anchored by receipts in the cloud |
-| The checksum comes from the provider | Offload trusts what the cloud reports for its copy | 2.1 records a local SHA-256 manifest in each custody receipt; 2.2 re-checks old offloads |
+| The checksum comes from the provider | Decant trusts what the cloud reports for its copy | 2.1 records a local SHA-256 manifest in each custody receipt; 2.2 re-checks old offloads |
 | A file could change between the last check and its removal | The re-check narrows the window, but cannot close it completely | Accepted |
-| If Offload crashes, rclone can outlive it | Nothing outside the core knows the password, so the leftover process is idle and unreachable | Possible fix: tie rclone's lifetime to the app's with a Windows job object |
+| If Decant crashes, rclone can outlive it | Nothing outside the core knows the password, so the leftover process is idle and unreachable | Possible fix: tie rclone's lifetime to the app's with a Windows job object |
 | `SHA256SUMS` for rclone is fetched over HTTPS, but its signature is not checked | The checksum guards against corrupted downloads, not a compromised download server | Check rclone's signature on `SHA256SUMS` in CI |
 | Installers are not code-signed | A certificate is needed | 2.5 |
 

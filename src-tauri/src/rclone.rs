@@ -4,7 +4,7 @@
 //! fresh each launch. Only this module knows the password: the page asks the
 //! core, the core checks the request against an allowlist and forwards it.
 //! The server is started without any cross-origin permission, so no web page,
-//! including Offload's own, can talk to it directly.
+//! including Decant's own, can talk to it directly.
 
 use serde_json::{Map, Value};
 use std::net::TcpListener;
@@ -106,7 +106,7 @@ fn free_port() -> Result<u16, String> {
     l.local_addr().map(|a| a.port()).map_err(|e| e.to_string())
 }
 
-/// The bundled rclone sits next to Offload's own executable, both when
+/// The bundled rclone sits next to Decant's own executable, both when
 /// installed and when run from a build.
 pub fn bundled_binary() -> Result<PathBuf, String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
@@ -136,7 +136,7 @@ impl Rclone {
             .arg(log_file)
             // Through the environment, not the command line, where any
             // program can read it from the process list.
-            .env("RCLONE_RC_USER", "offload")
+            .env("RCLONE_RC_USER", "decant")
             .env("RCLONE_RC_PASS", &pass)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -148,7 +148,7 @@ impl Rclone {
             cmd.creation_flags(CREATE_NO_WINDOW);
         }
         let child = cmd.spawn().map_err(|e| format!("could not start rclone: {e}"))?;
-        let auth = format!("Basic {}", base64(format!("offload:{pass}").as_bytes()));
+        let auth = format!("Basic {}", base64(format!("decant:{pass}").as_bytes()));
         let mut rc = Rclone { child, base: format!("http://127.0.0.1:{port}/"), auth };
 
         let started = Instant::now();
@@ -263,7 +263,7 @@ mod tests {
         assert_eq!(base64(b"f"), "Zg==");
         assert_eq!(base64(b"fo"), "Zm8=");
         assert_eq!(base64(b"foo"), "Zm9v");
-        assert_eq!(base64(b"offload:secret"), "b2ZmbG9hZDpzZWNyZXQ=");
+        assert_eq!(base64(b"decant:secret"), "ZGVjYW50OnNlY3JldA==");
     }
 }
 
@@ -306,7 +306,7 @@ mod live {
             eprintln!("skipping live test: no bundled rclone (run scripts/fetch-rclone.sh)");
             return None;
         };
-        let dir = std::env::temp_dir().join(format!("offload-live-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("decant-live-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let conf = dir.join("rclone.conf");
@@ -370,7 +370,7 @@ mod live {
     fn live_the_wrong_password_is_refused() {
         let Some(l) = start("auth") else { return };
         let (b, a) = l.rc.endpoint();
-        let wrong = format!("Basic {}", base64(b"offload:not-the-password"));
+        let wrong = format!("Basic {}", base64(b"decant:not-the-password"));
         assert_eq!(call(&b, &wrong, "core/version", json!({}), T).unwrap_err().status, 401);
         assert_eq!(call(&b, "", "core/version", json!({}), T).unwrap_err().status, 401);
         assert!(call(&b, &a, "core/version", json!({}), T).is_ok(), "control: the real password works");

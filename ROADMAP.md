@@ -1,4 +1,4 @@
-# Offload roadmap
+# Decant roadmap
 
 Version 1 is a local web page over rclone: upload, verify by checksum, then free the space. Version 2 turns it into installable desktop software, built for Windows, macOS and Linux and tested on Windows. It is built security-first, and every stage ships on its own.
 
@@ -15,7 +15,7 @@ The idea running through all of it is **chain of custody**: data leaves a machin
 ## Architecture (v2)
 
 ```
-┌──────────────── Offload (Tauri) ────────────────┐
+┌──────────────── Decant (Tauri) ────────────────┐
 │  Interface: HTML/CSS/JS, no framework           │
 │        │  Tauri IPC (no network involved)       │
 │  Rust core ── holds the rclone password         │
@@ -61,22 +61,22 @@ The idea running through all of it is **chain of custody**: data leaves a machin
 - Fuzz testing of the log and receipt parsers.
 
 ### 2.2 New layout and jobs
-- Sidebar layout: **Offload**, **Jobs**, **History**, **Clouds**, **Settings**. History is where the 2.1 log and reports live.
+- Sidebar layout: **Decant**, **Jobs**, **History**, **Clouds**, **Settings**. History is where the 2.1 log and reports live.
 - Several jobs queued at once, and saved jobs that run again with one click.
 - Rules: only files older than *N* days, include or exclude patterns, minimum size.
-- Scheduled offloads while Offload sits in the tray, and OS notifications.
+- Scheduled offloads while Decant sits in the tray, and OS notifications.
 - **Re-checking old offloads:** a scheduled job compares files uploaded long ago against their custody receipts, to catch anything the cloud lost or corrupted.
 - An accessibility pass: everything works from the keyboard and reads correctly in a screen reader.
 - **The project page** on GitHub Pages: what it does, screenshots, a demo and the security model.
-- **A speed benchmark:** Offload's upload speed at different settings, measured on a real connection.
+- **A speed benchmark:** Decant's upload speed at different settings, measured on a real connection.
 
 ### 2.3 Clouds
 - **Add a cloud** inside the app, on the new Clouds page, through rclone's config API, including the browser sign-in step.
-- Offload's own config, encrypted at rest with the key in Windows Credential Manager, the macOS Keychain or the Secret Service.
-- Google Drive through Offload's own client ID with the narrow `drive.file` permission, which only sees files the app uploaded itself. Existing rclone remotes, with full access, can still be imported. The trade-off is explained in the app.
+- Decant's own config, encrypted at rest with the key in Windows Credential Manager, the macOS Keychain or the Secret Service.
+- Google Drive through Decant's own client ID with the narrow `drive.file` permission, which only sees files the app uploaded itself. Existing rclone remotes, with full access, can still be imported. The trade-off is explained in the app.
 
 ### 2.4 Managed installs
-- **Group Policy on Windows:** an ADMX template, so IT departments set Offload's policy the way they manage other software. A policy file does the same on macOS and Linux.
+- **Group Policy on Windows:** an ADMX template, so IT departments set Decant's policy the way they manage other software. A policy file does the same on macOS and Linux.
 - Policies can turn deleting off, require verification, limit which clouds may be used and cap bandwidth. The app shows which settings are locked.
 - Silent install switches and documentation for rolling out to many machines.
 
@@ -91,7 +91,7 @@ The idea running through all of it is **chain of custody**: data leaves a machin
 
 ## Decisions still open
 
-- **Name:** chosen before the public 2.0 release. "Offload" is generic, hard to find in a search, and may clash with existing products.
+- ~~**Name**~~: settled in 2.0. The project began as "Offload", which turned out to be shared by several tools doing similar jobs, and was renamed **Decant**.
 - **Google client ID** (2.3): created by the project owner in Google's developer console.
 - **Code signing** (2.5): through the SignPath Foundation's free programme for open-source projects, if accepted. Until then, the installers carry no publisher signature.
 
