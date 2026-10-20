@@ -59,7 +59,7 @@ mod tests {
     use std::fs;
 
     fn sandbox(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("offload-paths-{}-{}", name, std::process::id()));
+        let dir = std::env::temp_dir().join(format!("decant-paths-{}-{}", name, std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(dir.join("folder/sub")).unwrap();
         fs::write(dir.join("folder/a.txt"), b"a").unwrap();
@@ -135,7 +135,7 @@ mod properties {
     fn sandbox() -> &'static (PathBuf, PathBuf) {
         static S: OnceLock<(PathBuf, PathBuf)> = OnceLock::new();
         S.get_or_init(|| {
-            let dir = std::env::temp_dir().join(format!("offload-props-{}", std::process::id()));
+            let dir = std::env::temp_dir().join(format!("decant-props-{}", std::process::id()));
             let _ = std::fs::remove_dir_all(&dir);
             std::fs::create_dir_all(dir.join("folder/sub")).unwrap();
             std::fs::write(dir.join("folder/a.txt"), b"a").unwrap();

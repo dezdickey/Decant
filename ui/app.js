@@ -1,5 +1,5 @@
 'use strict';
-// Offload's page. Everything it does goes through rclone's remote-control API
+// Decant's page. Everything it does goes through rclone's remote-control API
 // (rc.js): listing folders, copying, live progress, checksum checks, deleting.
 // There is no other back end.
 
@@ -30,8 +30,8 @@
   // localStorage holds only conveniences: the last folders, settings, recent
   // runs. A page that cannot store (private window) still works.
   const store = {
-    get(k, d) { try { const v = localStorage.getItem('offload.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-    set(k, v) { try { localStorage.setItem('offload.' + k, JSON.stringify(v)); } catch (e) { /* fine */ } },
+    get(k, d) { try { const v = localStorage.getItem('decant.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('decant.' + k, JSON.stringify(v)); } catch (e) { /* fine */ } },
   };
 
   let toastTimer = 0;
@@ -265,7 +265,7 @@
     const sum = $('dst-sum');
     sum.className = 'sum';
     if (!state.remotes.length) {
-      sum.replaceChildren('Connect a cloud once in a terminal with ', el('code', { text: 'rclone config' }), ', then reopen Offload.');
+      sum.replaceChildren('Connect a cloud once in a terminal with ', el('code', { text: 'rclone config' }), ', then reopen Decant.');
       $('dst-disk').hidden = true; return;
     }
     if (state.dstErr) {
@@ -681,9 +681,9 @@
   function freeBlocker() {
     const c = state.check;
     if (!c || !c.match.length) return 'Check the copies first.';
-    if (!c.hash || c.hash === 'none') return 'This cloud and your disk share no checksum, so the copies could only be compared by size. Offload only frees space when every byte has been compared.';
+    if (!c.hash || c.hash === 'none') return 'This cloud and your disk share no checksum, so the copies could only be compared by size. Decant only frees space when every byte has been compared.';
     const home = localHome(state.dst.remote, state.dst.path, 0);
-    if (home.unsure) return 'Offload cannot tell where this remote keeps its files, so it will not delete anything for it.';
+    if (home.unsure) return 'Decant cannot tell where this remote keeps its files, so it will not delete anything for it.';
     if (home.path != null) {
       const norm = (p) => p.replace(/\//g, '\\').replace(/\\+$/, '').toLowerCase() + '\\';
       const a = norm(state.src), b = norm(home.path);
@@ -970,12 +970,12 @@
 
     $('btn-quit').addEventListener('click', async () => {
       const running = state.job && !state.job.finished;
-      const ok = await ask('Stop Offload\'s server?',
+      const ok = await ask('Stop Decant\'s server?',
         running ? 'An upload or check is still running, and it stops too. Files already uploaded stay in the cloud.'
-                : 'This page stops working until you open Offload again.', 'Stop server');
+                : 'This page stops working until you open Decant again.', 'Stop server');
       if (!ok) return;
       try { await RC.call('core/quit', null, { timeout: 3000 }); } catch (e) { /* it is gone either way */ }
-      gate('The server was stopped. Open Offload again to carry on.');
+      gate('The server was stopped. Open Decant again to carry on.');
     });
     $('gate-retry').addEventListener('click', () => location.reload());
 
@@ -990,7 +990,7 @@
     if (RC.desktop) {
       // The app owns rclone's lifetime, so there is no server to stop by hand.
       $('btn-quit').hidden = true;
-      $('gate-text').textContent = 'Offload could not start its copy of rclone, so it cannot do anything yet.';
+      $('gate-text').textContent = 'Decant could not start its copy of rclone, so it cannot do anything yet.';
       const info = await RC.info();
       if (info.error) { gate(info.error); return; }
     }

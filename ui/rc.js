@@ -3,9 +3,9 @@
 //
 // Two ways in, same calls:
 // - In the desktop app, the page never sees rclone or its password. Each call
-//   goes to Offload's native core, which checks it against an allowlist and
+//   goes to Decant's native core, which checks it against an allowlist and
 //   relays it.
-// - In the browser version, the launcher writes window.OFFLOAD_SESSION (port,
+// - In the browser version, the launcher writes window.DECANT_SESSION (port,
 //   user, password) into session.js, and every request carries that password
 //   in an Authorization header. A header like that cannot be added to a
 //   request from another website without the server agreeing to it, and the
@@ -13,7 +13,7 @@
 
 const RC = (() => {
   const tauri = (window.__TAURI__ && window.__TAURI__.core) || null;
-  const s = tauri ? null : (window.OFFLOAD_SESSION || null);
+  const s = tauri ? null : (window.DECANT_SESSION || null);
   const base = s ? 'http://127.0.0.1:' + s.port + '/' : '';
   const auth = s ? 'Basic ' + btoa(s.user + ':' + s.pass) : '';
 
@@ -61,10 +61,10 @@ const RC = (() => {
   // so the specific ones come before the general.
   const RULES = [
     [/^unreachable$/,
-      'Offload\'s server has stopped',
+      'Decant\'s server has stopped',
       tauri
-        ? 'The part of Offload that runs rclone is not answering. Quit Offload from the tray icon and open it again.'
-        : 'This page cannot reach it. Start Offload again with Offload.cmd (or start.sh), and any upload still running carries on.'],
+        ? 'The part of Decant that runs rclone is not answering. Quit Decant from the tray icon and open it again.'
+        : 'This page cannot reach it. Start Decant again with Decant.cmd (or start.sh), and any upload still running carries on.'],
     [/^timed out$/,
       'No answer in time',
       'rclone is busy or the connection is slow. It will be tried again.'],

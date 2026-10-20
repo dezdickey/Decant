@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src http://127.0.0.1:* ipc: http://ipc.localhost">
-<title>Offload</title>
+<title>Decant</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Cpath d='M16 22V9M10 14l6-6 6 6' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -15,13 +15,13 @@
     <div class="brand">
       <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M16 22V9M10 14l6-6 6 6"/></svg>
       <div>
-        <h1>Offload</h1>
+        <h1>Decant</h1>
         <p class="tagline">Move files to the cloud, check every one, then free the space.</p>
       </div>
     </div>
     <div class="top-right">
       <span class="pill" id="conn"><i class="dot"></i><span id="conn-text">Connecting…</span></span>
-      <button class="btn ghost small" id="btn-quit" type="button" title="Stop Offload's background server">Stop server</button>
+      <button class="btn ghost small" id="btn-quit" type="button" title="Stop Decant's background server">Stop server</button>
     </div>
   </header>
 
@@ -109,7 +109,7 @@
 
     <section class="card" id="verify" aria-labelledby="verify-h">
       <header class="card-head"><span class="step">5</span><h2 id="verify-h">Check, then free up space</h2></header>
-      <p class="lead">Offload compares every file with its copy in the cloud using checksums. Only files that match exactly can be removed from this computer.</p>
+      <p class="lead">Decant compares every file with its copy in the cloud using checksums. Only files that match exactly can be removed from this computer.</p>
       <div id="verify-body"></div>
       <div class="actions">
         <button class="btn" id="btn-verify" type="button" disabled>Check the cloud copies</button>
@@ -132,8 +132,8 @@
 <div class="gate" id="gate" hidden>
   <div class="card">
     <svg class="logo big" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path d="M16 22V9M10 14l6-6 6 6"/></svg>
-    <h1>Offload isn't running</h1>
-    <p id="gate-text">This page works through a small server on your computer that the launcher starts. Open Offload with <code>Offload.cmd</code> on Windows, or <code>start.sh</code> on macOS and Linux, and this page opens by itself.</p>
+    <h1>Decant isn't running</h1>
+    <p id="gate-text">This page works through a small server on your computer that the launcher starts. Open Decant with <code>Decant.cmd</code> on Windows, or <code>start.sh</code> on macOS and Linux, and this page opens by itself.</p>
     <p class="muted" id="gate-detail"></p>
     <button class="btn" id="gate-retry" type="button">Try again</button>
   </div>

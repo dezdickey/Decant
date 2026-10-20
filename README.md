@@ -1,16 +1,18 @@
-# Offload
+# Decant
 
-[![CI](https://github.com/dezdickey/Offload/actions/workflows/ci.yml/badge.svg)](https://github.com/dezdickey/Offload/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/dezdickey/Offload/actions/workflows/codeql.yml/badge.svg)](https://github.com/dezdickey/Offload/actions/workflows/codeql.yml)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/dezdickey/Offload/badge)](https://scorecard.dev/viewer/?uri=github.com/dezdickey/Offload)
+[![CI](https://github.com/dezdickey/Decant/actions/workflows/ci.yml/badge.svg)](https://github.com/dezdickey/Decant/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/dezdickey/Decant/actions/workflows/codeql.yml/badge.svg)](https://github.com/dezdickey/Decant/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/dezdickey/Decant/badge)](https://scorecard.dev/viewer/?uri=github.com/dezdickey/Decant)
 
 **Move files to the cloud, prove every one arrived intact, then free the space on your disk.**
 
-Offload is a desktop app for Windows, macOS and Linux, built on [rclone](https://rclone.org). You pick a folder on your computer and a folder in the cloud. It shows what will happen, uploads with live progress, compares every file with its cloud copy by checksum, and only then offers to remove the local originals. It works with Google Drive, OneDrive, Dropbox, S3 and any of the 70-odd other backends rclone supports.
+*To decant is to pour from one vessel into another without spilling a drop, leaving the first one empty. That is the whole job: every file moved intact, then the space given back. The checksum check is how Decant proves nothing spilled.*
+
+Decant is a desktop app for Windows, macOS and Linux, built on [rclone](https://rclone.org). You pick a folder on your computer and a folder in the cloud. It shows what will happen, uploads with live progress, compares every file with its cloud copy by checksum, and only then offers to remove the local originals. It works with Google Drive, OneDrive, Dropbox, S3 and any of the 70-odd other backends rclone supports.
 
 It is built security-first around one idea, **chain of custody**: data leaves the machine only with proof it arrived intact. A no-install browser version ships alongside the app.
 
-![Offload planning an upload: the folder on this computer, the folder in the cloud, and how many files are new, already there or will be replaced](docs/plan.png)
+![Decant planning an upload: the folder on this computer, the folder in the cloud, and how many files are new, already there or will be replaced](docs/plan.png)
 
 *The screenshots use a demo folder, with a second disk standing in for the cloud.*
 
@@ -18,7 +20,7 @@ It is built security-first around one idea, **chain of custody**: data leaves th
 
 I had about 200 GB of video to move to Google Drive, and it was painfully slow through the browser. The usual advice is to install Google's desktop app, but that copies every file into a cache on the system drive before uploading it, and my system drive had 2 GB free. rclone was the right tool: it uploads straight from where a file already is, in large pieces and several files at once. But it is a command line, and the step I actually cared about came after the upload. I wanted to delete the local copies to get the space back, and I only wanted to do that once I knew the cloud copies were complete.
 
-So Offload is built around that last step.
+So Decant is built around that last step.
 
 ## Security at a glance
 
@@ -36,7 +38,7 @@ Details: [THREAT_MODEL.md](THREAT_MODEL.md) · [SECURITY.md](SECURITY.md) · [de
 1. **From:** a folder on this computer. Type or paste a path (Explorer's *Copy as path* quotes are fine), or browse your drives. It shows how much is in the folder and how full the disk is.
 2. **To:** any remote you have set up in rclone, and a folder inside it. It shows the cloud's free space.
 3. **What will happen:** the two sides are compared before anything moves: what is new, what is already there and will be skipped, what has a different size and will be replaced, whether it will fit, and how long it should take at your recent speed. On Google Drive it also warns about the 750 GB a day upload limit.
-4. **Upload:** live progress with bytes, speed (in MB/s and in Mbit/s, the unit internet plans are sold in), time left, a speed graph and per-file bars. Errors are translated from rclone's wording into what happened and what to do. Close the window mid-upload and Offload keeps going from the tray.
+4. **Upload:** live progress with bytes, speed (in MB/s and in Mbit/s, the unit internet plans are sold in), time left, a speed graph and per-file bars. Errors are translated from rclone's wording into what happened and what to do. Close the window mid-upload and Decant keeps going from the tray.
 
    ![An upload in progress: bytes sent, speed in MB/s and Mbit/s, time left, a speed graph and a bar per file](docs/upload.png)
 
@@ -46,21 +48,21 @@ Details: [THREAT_MODEL.md](THREAT_MODEL.md) · [SECURITY.md](SECURITY.md) · [de
 
 ## Getting started
 
-**Desktop app.** Download the installer for your system from [Releases](https://github.com/dezdickey/Offload/releases). rclone comes inside it. Until in-app sign-in arrives in 2.3, connect your cloud once with rclone itself:
+**Desktop app.** Download the installer for your system from [Releases](https://github.com/dezdickey/Decant/releases). rclone comes inside it. Until in-app sign-in arrives in 2.3, connect your cloud once with rclone itself:
 
 ```
 rclone config
 ```
 
-That is where you sign in to Google, Microsoft or another provider. Offload never sees your password.
+That is where you sign in to Google, Microsoft or another provider. Decant never sees your password.
 
-**Browser version, no install.** Install rclone (`winget install Rclone.Rclone` on Windows, or see [rclone.org/install](https://rclone.org/install/)), run `rclone config` once, then double-click **`Offload.cmd`** on Windows or run **`./start.sh`** on macOS and Linux. Your browser opens on the app.
+**Browser version, no install.** Install rclone (`winget install Rclone.Rclone` on Windows, or see [rclone.org/install](https://rclone.org/install/)), run `rclone config` once, then double-click **`Decant.cmd`** on Windows or run **`./start.sh`** on macOS and Linux. Your browser opens on the app.
 
 ## How it works
 
 ```
 Desktop app                                Browser version
-┌──────────────────────────┐               Offload.cmd / start.sh
+┌──────────────────────────┐               Decant.cmd / start.sh
 │ Interface (HTML/CSS/JS)  │                        │ starts
 │   │ Tauri IPC            │                        ▼
 │ Rust core: password,     │               rclone rcd ◀── HTTP + password ── page opened from disk
@@ -70,7 +72,7 @@ Desktop app                                Browser version
 └──────────────────────────┘
 ```
 
-There is no back end of Offload's own. rclone ships a [remote-control API](https://rclone.org/rc/) that can do everything its command line can. These are the calls Offload uses, and in the desktop app the core allows no others:
+There is no back end of Decant's own. rclone ships a [remote-control API](https://rclone.org/rc/) that can do everything its command line can. These are the calls Decant uses, and in the desktop app the core allows no others:
 
 | Step | rclone call |
 |---|---|
@@ -85,22 +87,22 @@ There is no back end of Offload's own. rclone ships a [remote-control API](https
 
 ## Safety details
 
-- **Only files that matched by checksum** can be selected for removal. If the cloud and the disk have no checksum in common, rclone can only compare sizes. Offload says so plainly and will not remove anything on that basis.
+- **Only files that matched by checksum** can be selected for removal. If the cloud and the disk have no checksum in common, rclone can only compare sizes. Decant says so plainly and will not remove anything on that basis.
 - **Each file is looked at again just before it is removed.** If its size or modification time has changed since the check, it is kept.
-- **Offload refuses when the copy is not really somewhere else:** inside the same folder, on the same disk (nothing would be freed), or behind a remote such as an encrypted one where it cannot tell where the files really live.
+- **Decant refuses when the copy is not really somewhere else:** inside the same folder, on the same disk (nothing would be freed), or behind a remote such as an encrypted one where it cannot tell where the files really live.
 - **Recycle Bin by default.** It can be restored, but the space only comes back when the bin is emptied, and the app says so. Permanent deletion is a separate, explicit choice.
 - **The browser version** puts its per-launch password in `ui/session.js`, which the launcher rewrites each time and git ignores, and allows only the page opened from disk to make cross-origin requests. See the threat model for how it differs from the app.
 
 ## Google Drive notes
 
-- **750 GB a day.** Google limits each account's uploads. Offload warns when a plan goes over, and by default sets rclone's `stop_on_upload_limit`, so the run stops cleanly instead of failing file after file. Run it again the next day: files already up are skipped.
+- **750 GB a day.** Google limits each account's uploads. Decant warns when a plan goes over, and by default sets rclone's `stop_on_upload_limit`, so the run stops cleanly instead of failing file after file. Run it again the next day: files already up are skipped.
 - **Piece size.** Uploads go up in 256 MB pieces by default, rather than rclone's 8 MB. Each piece waits for a reply, so fewer pieces means fewer pauses. Memory use is the piece size times the number of files going up at once.
 - **Your own client ID.** rclone's built-in Google sign-in is shared by every rclone user, is often rate-limited, and is [being retired during 2026](https://rclone.org/drive/#making-your-own-client-id). If uploads stall with "slow down" messages, create your own. It takes about 10 minutes in Google's developer console. Choose a *Desktop app*, then publish the app, or the sign-in expires every week.
 
 ## Limits
 
 - rclone cannot pause an upload. **Stop** ends it, and starting again skips every finished file. A file that was halfway up starts again from the beginning.
-- Encrypted (`crypt`) remotes are compared by size only, so Offload will not free space for them. rclone's `cryptcheck` command can verify them properly from a terminal.
+- Encrypted (`crypt`) remotes are compared by size only, so Decant will not free space for them. rclone's `cryptcheck` command can verify them properly from a terminal.
 - The app is tested by hand on Windows. CI builds the macOS and Linux installers, but they are not exercised by hand.
 
 ## Building from source
@@ -132,7 +134,7 @@ ui/                        the interface, shared by the app and the browser vers
   format.js                sizes, speeds and durations in words
 tests/index.html           tests for format.js and rc.js, run in a browser
 scripts/fetch-rclone.sh    fetches and verifies the bundled rclone
-Offload.cmd, start.ps1     browser version launcher (Windows)
+Decant.cmd, start.ps1     browser version launcher (Windows)
 start.sh                   browser version launcher (macOS, Linux)
 docs/decisions/            why things are the way they are
 .github/                   CI, CodeQL, Scorecard, Dependabot, release pipeline
@@ -152,7 +154,7 @@ To run the interface tests headless, pass Chrome the page's full path and a thro
 
 ```
 # Windows (PowerShell)
-& "$env:ProgramFiles\Google\Chrome\Application\chrome.exe" --headless=new --user-data-dir="$env:TEMP\offload-tests" --virtual-time-budget=3000 --dump-dom "$PWD\tests\index.html" | Select-String '<title>'
+& "$env:ProgramFiles\Google\Chrome\Application\chrome.exe" --headless=new --user-data-dir="$env:TEMP\decant-tests" --virtual-time-budget=3000 --dump-dom "$PWD\tests\index.html" | Select-String '<title>'
 
 # macOS and Linux
 google-chrome --headless=new --user-data-dir="$(mktemp -d)" --virtual-time-budget=3000 --dump-dom "$PWD/tests/index.html" | grep -o '<title>[^<]*'
@@ -160,8 +162,8 @@ google-chrome --headless=new --user-data-dir="$(mktemp -d)" --virtual-time-budge
 
 ## Licence
 
-Offload is licensed under the [Apache License 2.0](LICENSE). It bundles rclone, which is MIT-licensed.
+Decant is licensed under the [Apache License 2.0](LICENSE). It bundles rclone, which is MIT-licensed.
 
 ---
 
-Offload is not affiliated with or endorsed by Google or the rclone project. Google Drive is a trademark of Google LLC.
+Decant is not affiliated with or endorsed by Google or the rclone project. Google Drive is a trademark of Google LLC.

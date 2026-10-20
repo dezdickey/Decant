@@ -1,15 +1,15 @@
-# 4. Reuse rclone's config until Offload can encrypt its own
+# 4. Reuse rclone's config until Decant can encrypt its own
 
 **Status:** accepted for 2.0; replaced in 2.3
 
 ## Context
 
-rclone keeps cloud sign-in tokens in its config file, in plain text unless the user sets a config password. Offload eventually wants its own config, encrypted, with the key in the OS keychain (stage 2.3). The question is what 2.0 does in the meantime.
+rclone keeps cloud sign-in tokens in its config file, in plain text unless the user sets a config password. Decant eventually wants its own config, encrypted, with the key in the OS keychain (stage 2.3). The question is what 2.0 does in the meantime.
 
 ## Options
 
-1. **Copy the user's remotes into an Offload config now.** This puts a second plain-text copy of every token on disk.
-2. **Reuse rclone's own config** where the remotes already live, and switch to an encrypted Offload config in 2.3.
+1. **Copy the user's remotes into a Decant config now.** This puts a second plain-text copy of every token on disk.
+2. **Reuse rclone's own config** where the remotes already live, and switch to an encrypted Decant config in 2.3.
 
 ## Decision
 

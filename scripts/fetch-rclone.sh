@@ -1,5 +1,5 @@
 #!/bin/sh
-# Fetch the rclone that Offload bundles, check it against rclone's published
+# Fetch the rclone that Decant bundles, check it against rclone's published
 # SHA-256, and put it where Tauri expects a sidecar:
 #   src-tauri/binaries/rclone-<target triple>[.exe]
 #

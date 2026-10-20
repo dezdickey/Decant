@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Offload",
+  "productName": "Decant",
   "version": "2.0.0",
-  "identifier": "io.github.dezdickey.offload",
+  "identifier": "io.github.dezdickey.decant",
   "build": {
     "frontendDist": "../ui"
   },
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Offload",
+        "title": "Decant",
         "width": 1100,
         "height": 840,
         "minWidth": 380,
@@ -28,7 +28,7 @@
     "targets": "all",
     "category": "Utility",
     "shortDescription": "Move files to the cloud, prove every one arrived intact, then free the space.",
-    "longDescription": "Offload uploads a folder to any cloud rclone supports, compares every file with its cloud copy by checksum, and only then offers to remove the local originals.",
+    "longDescription": "Decant uploads a folder to any cloud rclone supports, compares every file with its cloud copy by checksum, and only then offers to remove the local originals.",
     "license": "Apache-2.0",
     "licenseFile": "../LICENSE",
     "externalBin": ["binaries/rclone"],

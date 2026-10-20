@@ -4,7 +4,10 @@ Each version is one stage of the [roadmap](ROADMAP.md). The format follows [Keep
 
 ## [2.0.0] — Desktop
 
-Offload becomes installable software for Windows, macOS and Linux, with rclone bundled.
+Decant becomes installable software for Windows, macOS and Linux, with rclone bundled.
+
+### Changed
+- **Renamed from Offload to Decant.** "Offload" was already used by several tools doing similar jobs. The browser launcher is now `Decant.cmd`, and settings saved by the 1.0 browser version are not carried over.
 
 ### Added
 - Desktop app built with Tauri, wrapping the existing interface, with rclone included in the installer.

@@ -1,4 +1,4 @@
-//! Offload's native core. It owns rclone (starts it, holds its password,
+//! Decant's native core. It owns rclone (starts it, holds its password,
 //! stops it), relays the page's calls through an allowlist, moves freed files
 //! to the Recycle Bin, and keeps a tray icon while jobs run.
 
@@ -79,7 +79,7 @@ fn app_info(app: AppHandle, core: State<'_, Core>) -> Value {
 }
 
 /// Is any upload or check still running? Decides whether closing the window
-/// quits or tucks Offload into the tray.
+/// quits or tucks Decant into the tray.
 fn jobs_running(app: &AppHandle) -> bool {
     let core = app.state::<Core>();
     let Ok((base, auth)) = core.endpoint() else { return false };
@@ -124,11 +124,11 @@ pub fn run() {
                 Err(e) => *core.start_error.lock().unwrap() = Some(e),
             }
 
-            let show = MenuItem::with_id(app, "show", "Show Offload", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "Show Decant", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit (stops any upload)", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
-            let mut tray = TrayIconBuilder::with_id("offload")
-                .tooltip("Offload")
+            let mut tray = TrayIconBuilder::with_id("decant")
+                .tooltip("Decant")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
@@ -158,7 +158,7 @@ pub fn run() {
             }
         })
         .build(tauri::generate_context!())
-        .expect("error while building Offload");
+        .expect("error while building Decant");
 
     app.run(|app, event| {
         if let RunEvent::Exit = event {
