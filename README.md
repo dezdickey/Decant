@@ -27,7 +27,7 @@ So Decant is built around that last step.
 - **The interface is the least trusted part.** It cannot reach rclone directly. Every call goes through a small Rust core, which holds rclone's password, allows a fixed list of 14 calls and strips sign-in tokens from replies. ([decision record](docs/decisions/0002-the-core-relays-every-rclone-call.md))
 - **Nothing reaches rclone from a web page.** It listens only on 127.0.0.1 with a fresh 192-bit password and grants no cross-origin access.
 - **Deleting is fenced in.** Only files that matched by checksum, unchanged since the check, inside the folder being offloaded, and whose copy is on a different disk. Removed files go to the Recycle Bin by default.
-- **Tested by attacking it.** Live tests start the real rclone and attack the relay, each with a control proving the attack would otherwise work. Property-based tests throw thousands of generated paths at the deletion check.
+- **Tested by attacking it.** Live tests start the real rclone the way the app does and attack it, each also proving its setup is real, so a pass cannot come from a broken attack. Property-based tests throw thousands of generated paths at the deletion check.
 - **Supply chain.** Every action pinned to a commit, `cargo audit`, CodeQL, OpenSSF Scorecard, and Dependabot. Releases carry checksums, an SBOM and GitHub build provenance.
 - **No data leaves the device** except your files, to the cloud you chose. No accounts, telemetry or analytics.
 
@@ -142,7 +142,7 @@ docs/decisions/            why things are the way they are
 
 ## How it was tested
 
-- **The Rust core** (`cargo test`): unit tests; live tests that start the real rclone and attack the relay (forbidden calls, planted tokens, wrong passwords, cross-origin preflights), each with a control; and property-based tests that send 4,000 generated paths at the deletion check. CI runs them on every push, with Clippy, `cargo audit` and CodeQL.
+- **The Rust core** (`cargo test`): unit tests; live tests that start the real rclone the way the app does and attack it (forbidden calls and planted tokens through the relay, wrong passwords and cross-origin preflights at rclone itself), each also proving its setup is real, for example that the same purge sent straight to rclone does delete; and property-based tests that send 4,000 generated paths at the deletion check. CI runs them on every pull request and every push to `main`, with Clippy, `cargo audit` and CodeQL. Without the bundled rclone the live tests skip themselves, so CI always fetches it first.
 - **The interface** (`tests/index.html`): every number format at its edges, and every rule in the error table against a sample of the error it exists for. That found a real bug: an unknown remote was being explained as broken settings.
 - **By hand, on Windows**, against an isolated rclone config whose "cloud" was a folder on a second disk:
   - the desktop app: an upload under a speed cap; closing the window mid-upload, so it continued from the tray; the checksum check; a removal confirmed in the Recycle Bin; and quitting, which stops rclone;
