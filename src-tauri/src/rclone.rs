@@ -269,10 +269,11 @@ mod tests {
 
 #[cfg(test)]
 mod live {
-    //! Start the real rclone the way the app does, then attack the relay.
-    //! Each attack has a control: the same request sent straight to rclone,
-    //! bypassing the relay, must work, so a pass means the relay stopped it
-    //! and not that the attack was harmless anyway.
+    //! Start the real rclone the way the app does, then attack it. Each
+    //! test also proves its setup is real, so a pass cannot come from a
+    //! broken attack: sent straight to rclone, the same purge does delete
+    //! and the planted token does come back; the real password works; and
+    //! rclone must answer the preflights, and answer before it is stopped.
     //!
     //! They need the bundled binary (`scripts/fetch-rclone.sh`). Without it
     //! they print a notice and pass, so a fresh clone can still `cargo test`;

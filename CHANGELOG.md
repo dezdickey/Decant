@@ -14,7 +14,7 @@ Decant becomes installable software for Windows, macOS and Linux, with rclone bu
 - A tray icon. Closing the window while an upload or check runs keeps it running in the tray; closing with nothing running quits, and stops rclone.
 - Freed files go to the **Recycle Bin** (Trash on macOS and Linux) by default, with permanent deletion as an explicit choice. The dialog says that the space returns only once the bin is emptied.
 - `THREAT_MODEL.md`, `SECURITY.md`, and decision records in `docs/decisions/`.
-- CI on every push: interface tests, Rust tests, Clippy, `cargo audit`, CodeQL, OpenSSF Scorecard and Dependabot.
+- CI on every pull request and every push to `main`: interface tests, Rust tests, Clippy, `cargo audit` and CodeQL. OpenSSF Scorecard runs on pushes to `main` and weekly, and Dependabot checks dependencies weekly.
 - A release pipeline: installers for three platforms, SHA-256 checksums, an SBOM, and GitHub build provenance.
 
 ### Security
@@ -26,10 +26,10 @@ Decant becomes installable software for Windows, macOS and Linux, with rclone bu
 - Every GitHub Action is pinned to a commit, and the bundled rclone is checked against its published SHA-256.
 
 ### Fixed
-- A comparison by size alone could be reported as a checksum match, because rclone names the missing hash type `none`. It is now labelled as size-only and never unlocks removal.
 - Closing the window always hid it in the tray, because the check for running jobs counted itself as one. The core now tracks the background jobs it started.
 
 ## [1.0.0] — Browser version
 
 - Upload a folder to any rclone remote, with a plan before anything moves, live progress, a checksum check of every file, and removal of verified local copies.
 - Runs as a page opened from disk, talking to rclone's remote-control server with a per-launch password.
+- A comparison by size alone is labelled as size-only and never unlocks removal. rclone names a missing hash type `none`, which testing caught being read as a real checksum before 1.0 was finished.

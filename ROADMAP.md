@@ -51,7 +51,7 @@ The idea running through all of it is **chain of custody**: data leaves a machin
 - Tray icon. Closing the window while a job runs keeps it running in the tray; otherwise closing quits.
 - Tests: unit tests, property-based tests of the path check, and integration tests of the core against a real rclone.
 - `THREAT_MODEL.md` (assets, trust boundaries, a STRIDE pass over each) and `SECURITY.md` (private vulnerability reporting).
-- **Supply chain, from the first release:** CI runs tests, `cargo clippy`, `cargo audit` and CodeQL on every push. Dependabot keeps dependencies current, and an OpenSSF Scorecard rates the repository's practices. Every release carries SHA-256 checksums, an SBOM and GitHub build provenance. The bundled rclone is verified against its published checksum.
+- **Supply chain, from the first release:** CI runs tests, `cargo clippy`, `cargo audit` and CodeQL on every pull request and every push to `main`. Dependabot keeps dependencies current, and an OpenSSF Scorecard rates the repository's practices. Every release carries SHA-256 checksums, an SBOM and GitHub build provenance. The bundled rclone is verified against its published checksum.
 
 ### 2.1 Proof
 - **An anchored, tamper-evident activity log.** Append-only, with each entry carrying the SHA-256 of the one before it, and signed with a key held in the OS keychain. A hash chain alone can be rewritten end to end by anyone who can edit the file, so it is also anchored outside the machine (next point).
