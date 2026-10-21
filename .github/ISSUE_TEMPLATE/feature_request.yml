@@ -1,0 +1,19 @@
+name: Feature request
+description: Something Decant should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what gets in the way?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+  - type: markdown
+    attributes:
+      value: |
+        [ROADMAP.md](https://github.com/dezdickey/Decant/blob/main/ROADMAP.md) lists what is already planned, stage by stage.

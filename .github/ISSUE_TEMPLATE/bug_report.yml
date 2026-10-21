@@ -1,0 +1,60 @@
+name: Bug report
+description: Something Decant did wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Found a security problem? Please don't open an issue. [Report it privately](https://github.com/dezdickey/Decant/security/advisories/new) instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected to happen
+  - type: input
+    id: version
+    attributes:
+      label: Decant version
+      placeholder: "2.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: edition
+    attributes:
+      label: Desktop app or browser version
+      options:
+        - Desktop app
+        - Browser version
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: |
+        The lines around the problem from `rclone.log`, which on Windows is in `%LOCALAPPDATA%\io.github.dezdickey.decant\logs`.
+        Logs contain file and folder names, so remove anything private first. Never paste your rclone config: it holds your cloud sign-in tokens.
+      render: text
