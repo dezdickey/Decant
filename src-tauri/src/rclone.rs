@@ -107,11 +107,13 @@ fn free_port() -> Result<u16, String> {
 }
 
 /// The bundled rclone sits next to Decant's own executable, both when
-/// installed and when run from a build.
+/// installed and when run from a build. It is named decant-rclone so it never
+/// collides with an rclone the user installed: on Linux both would otherwise
+/// be /usr/bin/rclone, and installing or removing Decant would clobber theirs.
 pub fn bundled_binary() -> Result<PathBuf, String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let dir = exe.parent().ok_or("no folder for the executable")?;
-    let name = if cfg!(windows) { "rclone.exe" } else { "rclone" };
+    let name = if cfg!(windows) { "decant-rclone.exe" } else { "decant-rclone" };
     let path = dir.join(name);
     if path.is_file() {
         Ok(path)
@@ -276,8 +278,9 @@ mod live {
     //! rclone must answer the preflights, and answer before it is stopped.
     //!
     //! They need the bundled binary (`scripts/fetch-rclone.sh`). Without it
-    //! they print a notice and pass, so a fresh clone can still `cargo test`;
-    //! CI always fetches it first.
+    //! they print a notice and pass, so a fresh clone can still `cargo test`.
+    //! CI fetches it first and sets DECANT_REQUIRE_LIVE, so there a missing
+    //! binary fails instead of quietly skipping every attack.
     use super::*;
     use serde_json::json;
 
@@ -286,7 +289,7 @@ mod live {
     fn binary() -> Option<PathBuf> {
         let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("binaries");
         std::fs::read_dir(dir).ok()?.flatten().map(|e| e.path()).find(|p| {
-            p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("rclone-"))
+            p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("decant-rclone-"))
         })
     }
 
@@ -304,6 +307,10 @@ mod live {
 
     fn start(name: &str) -> Option<Live> {
         let Some(bin) = binary() else {
+            assert!(
+                std::env::var_os("DECANT_REQUIRE_LIVE").is_none(),
+                "no bundled rclone in src-tauri/binaries, and DECANT_REQUIRE_LIVE is set"
+            );
             eprintln!("skipping live test: no bundled rclone (run scripts/fetch-rclone.sh)");
             return None;
         };
