@@ -43,6 +43,8 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
       - name: Tests
         working-directory: src-tauri
+        env:
+          DECANT_REQUIRE_LIVE: "1"   # a missing rclone fails the live tests here
         run: cargo test
 
   audit:

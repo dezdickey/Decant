@@ -278,8 +278,9 @@ mod live {
     //! rclone must answer the preflights, and answer before it is stopped.
     //!
     //! They need the bundled binary (`scripts/fetch-rclone.sh`). Without it
-    //! they print a notice and pass, so a fresh clone can still `cargo test`;
-    //! CI always fetches it first.
+    //! they print a notice and pass, so a fresh clone can still `cargo test`.
+    //! CI fetches it first and sets DECANT_REQUIRE_LIVE, so there a missing
+    //! binary fails instead of quietly skipping every attack.
     use super::*;
     use serde_json::json;
 
@@ -306,6 +307,10 @@ mod live {
 
     fn start(name: &str) -> Option<Live> {
         let Some(bin) = binary() else {
+            assert!(
+                std::env::var_os("DECANT_REQUIRE_LIVE").is_none(),
+                "no bundled rclone in src-tauri/binaries, and DECANT_REQUIRE_LIVE is set"
+            );
             eprintln!("skipping live test: no bundled rclone (run scripts/fetch-rclone.sh)");
             return None;
         };
