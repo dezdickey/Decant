@@ -1,7 +1,9 @@
 #!/bin/sh
 # Fetch the rclone that Decant bundles, check it against rclone's published
 # SHA-256, and put it where Tauri expects a sidecar:
-#   src-tauri/binaries/rclone-<target triple>[.exe]
+#   src-tauri/binaries/decant-rclone-<target triple>[.exe]
+# The decant- prefix keeps it from colliding with an rclone the user installed
+# themselves: on Linux both would otherwise be /usr/bin/rclone.
 #
 # Usage: scripts/fetch-rclone.sh [target-triple]   (default: this machine's)
 set -eu
@@ -41,7 +43,7 @@ fi
 
 (cd "$work" && { unzip -q "$name.zip" 2>/dev/null || tar -xf "$name.zip"; })
 mkdir -p "$here/src-tauri/binaries"
-out="$here/src-tauri/binaries/rclone-$triple$ext"
+out="$here/src-tauri/binaries/decant-rclone-$triple$ext"
 cp "$work/$name/rclone$ext" "$out"
 chmod +x "$out"
 echo "rclone v$VERSION for $triple, SHA-256 verified -> ${out#"$here"/}"

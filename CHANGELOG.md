@@ -10,7 +10,7 @@ Decant becomes installable software for Windows, macOS and Linux, with rclone bu
 - **Renamed from Offload to Decant.** "Offload" was already used by several tools doing similar jobs. The browser launcher is now `Decant.cmd`, and settings saved by the 1.0 browser version are not carried over.
 
 ### Added
-- Desktop app built with Tauri, wrapping the existing interface, with rclone included in the installer.
+- Desktop app built with Tauri, wrapping the existing interface, with rclone included in the installer. It is installed as `decant-rclone`, so it never collides with an rclone you installed yourself.
 - A tray icon. Closing the window while an upload or check runs keeps it running in the tray; closing with nothing running quits, and stops rclone.
 - The app shows its own version beside rclone's, at the top right, so a bug report can name the release.
 - Freed files go to the **Recycle Bin** (Trash on macOS and Linux) by default, with permanent deletion as an explicit choice. The dialog says that the space returns only once the bin is emptied.
