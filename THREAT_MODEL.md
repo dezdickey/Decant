@@ -72,7 +72,7 @@ Decant moves files from a computer to a cloud, checks every copy by checksum, an
 |---|---|
 | A tampered rclone binary | `scripts/fetch-rclone.sh` pins the version and checks the download against rclone's published SHA-256. |
 | A vulnerable or malicious crate | `Cargo.lock` is committed; `cargo audit` runs in CI; Dependabot proposes updates. |
-| A tampered build | Releases are built by GitHub Actions and carry build provenance, SHA-256 checksums and an SBOM. |
+| A tampered build | Releases are built by GitHub Actions and carry build provenance, SHA-256 checksums and an SBOM. Release builds use no cache, so a poisoned cache from an earlier run can't reach an installer. |
 
 ## How 2.0 was attacked
 
@@ -104,7 +104,7 @@ Listed so they are not mistaken for oversights.
 | A file could change between the last check and its removal | The re-check narrows the window, but cannot close it completely | Accepted |
 | If Decant crashes, rclone can outlive it | Nothing outside the core knows the password, so the leftover process is idle and unreachable | Possible fix: tie rclone's lifetime to the app's with a Windows job object |
 | `SHA256SUMS` for rclone is fetched over HTTPS, but its signature is not checked | The checksum guards against corrupted downloads, not a compromised download server | Check rclone's signature on `SHA256SUMS` in CI |
-| Installers are not code-signed | A certificate is needed | 2.5 |
+| Installers are not code-signed | A certificate is needed. The macOS app has only an ad-hoc signature, which lets it open but doesn't prove who made it | 2.5 signs the Windows installer. Signing for macOS needs a paid Apple Developer ID and isn't planned yet |
 
 ## The browser version (v1)
 

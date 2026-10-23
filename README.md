@@ -50,7 +50,7 @@ Details: [THREAT_MODEL.md](THREAT_MODEL.md) · [SECURITY.md](SECURITY.md) · [de
 
 ## Getting started
 
-**Desktop app.** Download the installer for your system from [Releases](https://github.com/dezdickey/Decant/releases). rclone comes inside it. The installers are not code-signed yet (that is planned for 2.5), so the first time you run one, Windows shows *Windows protected your PC*: choose **More info**, then **Run anyway**. On macOS, allow it in System Settings under Privacy & Security. Each release lists how to check a download is genuine before you run it.
+**Desktop app.** Download the installer for your system from [Releases](https://github.com/dezdickey/Decant/releases). rclone comes inside it. The installers are not code-signed yet (signing for Windows is planned for 2.5), so the first time you run one, Windows shows *Windows protected your PC*: choose **More info**, then **Run anyway**. On macOS, allow it in System Settings under Privacy & Security. Each release lists how to check a download is genuine before you run it.
 
 Until in-app sign-in arrives in 2.3, connect your cloud once with rclone itself:
 

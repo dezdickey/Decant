@@ -35,13 +35,12 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf xdg-utils
+      # No build cache here, unlike CI. A release is built from scratch, so
+      # nothing left over from an earlier run can end up in an installer.
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           toolchain: stable
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          workspaces: src-tauri
       - name: Fetch the bundled rclone (checksum-verified)
         shell: bash
         run: scripts/fetch-rclone.sh ${{ matrix.target }}
@@ -137,7 +136,7 @@ jobs:
           gh attestation verify <installer> --repo ${{ github.repository }}
           ```
 
-          `decant-sbom.cdx.json` lists every Rust component inside the app. The installers are not code-signed yet (that is planned for 2.5), so Windows warns before the first launch, and macOS may not open the app until you allow it in System Settings, under Privacy & Security.
+          `decant-sbom.cdx.json` lists every Rust component inside the app. The installers are not code-signed yet, so Windows warns before the first launch. Signing for Windows is planned for 2.5. The macOS app has only an ad-hoc signature, so macOS may not open it until you allow it in System Settings, under Privacy & Security.
           EOF
           cat notes.md
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
