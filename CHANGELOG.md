@@ -2,7 +2,7 @@
 
 Each version is one stage of the [roadmap](ROADMAP.md). The format follows [Keep a Changelog](https://keepachangelog.com/), and versions follow [semantic versioning](https://semver.org/).
 
-## [2.0.0] — Desktop
+## [2.0.0] — 2026-10-23 — Desktop
 
 Decant becomes installable software for Windows, macOS and Linux, with rclone bundled.
 
@@ -30,7 +30,7 @@ Decant becomes installable software for Windows, macOS and Linux, with rclone bu
 ### Fixed
 - Closing the window always hid it in the tray, because the check for running jobs counted itself as one. The core now tracks the background jobs it started.
 
-## [1.0.0] — Browser version
+## [1.0.0] — 2026-10-17 — Browser version
 
 - Upload a folder to any rclone remote, with a plan before anything moves, live progress, a checksum check of every file, and removal of verified local copies.
 - Runs as a page opened from disk, talking to rclone's remote-control server with a per-launch password.
