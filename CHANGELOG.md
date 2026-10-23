@@ -31,6 +31,8 @@ Decant becomes installable software for Windows, macOS and Linux, with rclone bu
 
 ### Fixed
 - Closing the window always hid it in the tray, because rclone counts the call that lists running jobs as a running job. The core now tracks the background jobs it started.
+- `start.sh` and `scripts/fetch-rclone.sh` are now marked executable. They were saved on Windows, which doesn't record that mark, so on macOS and Linux `./start.sh` failed with *Permission denied*, and the release build couldn't fetch rclone.
+- On Linux, `start.sh` opens the page with `xdg-open`. It used to try `open` first, which on some Linux systems is a different program entirely.
 
 ## [1.0.0] — 2026-10-17 — Browser version
 

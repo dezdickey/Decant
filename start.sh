@@ -11,8 +11,10 @@ session="$ui/session.js"
 logs="$here/logs"
 page="$ui/index.html"
 
+# `open` only on macOS: on some Linux systems a program called open exists
+# but does something else entirely (openvt, which switches text consoles).
 open_page() {
-  if command -v open >/dev/null 2>&1; then open "$page"
+  if [ "$(uname)" = Darwin ]; then open "$page"
   elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$page" >/dev/null 2>&1 &
   else echo "Open this in your browser: $page"
   fi
