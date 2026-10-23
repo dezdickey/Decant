@@ -104,7 +104,7 @@ Listed so they are not mistaken for oversights.
 | A file could change between the last check and its removal | The re-check narrows the window, but cannot close it completely | Accepted |
 | If Decant crashes, rclone can outlive it | Nothing outside the core knows the password, so the leftover process is idle and unreachable | Possible fix: tie rclone's lifetime to the app's with a Windows job object |
 | `SHA256SUMS` for rclone is fetched over HTTPS, but its signature is not checked | The checksum guards against corrupted downloads, not a compromised download server | Check rclone's signature on `SHA256SUMS` in CI |
-| Installers are not code-signed | A certificate is needed | 2.5 |
+| Installers are not code-signed | A certificate is needed. The macOS app has only an ad-hoc signature, which lets it open but doesn't prove who made it | 2.5 signs the Windows installer. Signing the macOS app with a Developer ID isn't planned yet |
 
 ## The browser version (v1)
 

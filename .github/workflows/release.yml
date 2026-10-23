@@ -136,7 +136,7 @@ jobs:
           gh attestation verify <installer> --repo ${{ github.repository }}
           ```
 
-          `decant-sbom.cdx.json` lists every Rust component inside the app. The installers are not code-signed yet (that is planned for 2.5), so the first time you run one on Windows, choose More info, then Run anyway, and on macOS allow it in System Settings, under Privacy & Security.
+          `decant-sbom.cdx.json` lists every Rust component inside the app. The installers are not code-signed yet, so the first time you run one on Windows, choose More info, then Run anyway. Signing for Windows is planned for 2.5. The macOS app has an ad-hoc signature: allow it in System Settings, under Privacy & Security, the first time you open it.
           EOF
           cat notes.md
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
