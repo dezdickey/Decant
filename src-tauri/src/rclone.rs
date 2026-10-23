@@ -107,11 +107,13 @@ fn free_port() -> Result<u16, String> {
 }
 
 /// The bundled rclone sits next to Decant's own executable, both when
-/// installed and when run from a build.
+/// installed and when run from a build. It is named decant-rclone so it never
+/// collides with an rclone the user installed: on Linux both would otherwise
+/// be /usr/bin/rclone, and installing or removing Decant would clobber theirs.
 pub fn bundled_binary() -> Result<PathBuf, String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let dir = exe.parent().ok_or("no folder for the executable")?;
-    let name = if cfg!(windows) { "rclone.exe" } else { "rclone" };
+    let name = if cfg!(windows) { "decant-rclone.exe" } else { "decant-rclone" };
     let path = dir.join(name);
     if path.is_file() {
         Ok(path)
@@ -286,7 +288,7 @@ mod live {
     fn binary() -> Option<PathBuf> {
         let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("binaries");
         std::fs::read_dir(dir).ok()?.flatten().map(|e| e.path()).find(|p| {
-            p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("rclone-"))
+            p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("decant-rclone-"))
         })
     }
 
