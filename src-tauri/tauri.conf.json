@@ -31,7 +31,7 @@
     "longDescription": "Decant uploads a folder to any cloud rclone supports, compares every file with its cloud copy by checksum, and only then offers to remove the local originals.",
     "license": "Apache-2.0",
     "licenseFile": "../LICENSE",
-    "externalBin": ["binaries/rclone"],
+    "externalBin": ["binaries/decant-rclone"],
     "resources": {
       "../third-party/rclone-LICENSE.txt": "third-party/rclone-LICENSE.txt"
     },
