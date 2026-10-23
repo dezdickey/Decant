@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-free-file"
+description = "Enables the free_file command without any pre-configured scope."
+commands.allow = ["free_file"]
+
+[[permission]]
+identifier = "deny-free-file"
+description = "Denies the free_file command without any pre-configured scope."
+commands.deny = ["free_file"]

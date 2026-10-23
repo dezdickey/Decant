@@ -1,5 +1,5 @@
 #!/bin/sh
-# Offload launcher for macOS and Linux. Same job as start.ps1: start rclone's
+# Decant launcher for macOS and Linux. Same job as start.ps1: start rclone's
 # remote-control server on 127.0.0.1 with a password made for this launch,
 # write it where the page can read it, and open the page. A server that is
 # already running is reused, so a running upload is never interrupted.
@@ -32,7 +32,7 @@ alive() {
 if alive; then open_page; exit 0; fi
 
 if ! command -v rclone >/dev/null 2>&1; then
-  echo "Offload needs rclone, and it is not installed."
+  echo "Decant needs rclone, and it is not installed."
   echo "See https://rclone.org/install/ then connect your cloud once with: rclone config"
   exit 1
 fi
@@ -43,7 +43,7 @@ pass=$(head -c 24 /dev/urandom | base64 | tr -d '+/=\n')
 for port in $(seq 5573 5599); do
   # The password goes in through the environment, not the command line,
   # where other programs could read it from the process list.
-  RCLONE_RC_USER=offload RCLONE_RC_PASS="$pass" nohup rclone rcd \
+  RCLONE_RC_USER=decant RCLONE_RC_PASS="$pass" nohup rclone rcd \
     --rc-addr "127.0.0.1:$port" \
     --rc-allow-origin null \
     --rc-job-expire-duration 24h \
@@ -52,7 +52,7 @@ for port in $(seq 5573 5599); do
   {
     echo '// Written by the launcher. Holds the password to the local server for this'
     echo '// run only: it is replaced on every launch and is never committed.'
-    echo "window.OFFLOAD_SESSION = {\"port\":$port,\"user\":\"offload\",\"pass\":\"$pass\"};"
+    echo "window.DECANT_SESSION = {\"port\":$port,\"user\":\"decant\",\"pass\":\"$pass\"};"
   } > "$session"
   i=0
   while [ $i -lt 40 ]; do

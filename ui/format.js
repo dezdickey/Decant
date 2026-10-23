@@ -4,7 +4,7 @@
 const Fmt = (() => {
   const UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
 
-  // Sizes count in 1024s and are labelled GB, the way Windows Explorer and
+  // Sizes count in 1024s and are labeled GB, the way Windows Explorer and
   // Google Drive show them, so a figure here matches the one people see there.
   function bytes(n) {
     if (n == null || !isFinite(n) || n < 0) return '–';
