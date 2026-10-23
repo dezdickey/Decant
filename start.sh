@@ -11,8 +11,9 @@ session="$ui/session.js"
 logs="$here/logs"
 page="$ui/index.html"
 
+# `open` is the macOS command; Linux desktops open files with xdg-open.
 open_page() {
-  if command -v open >/dev/null 2>&1; then open "$page"
+  if [ "$(uname)" = Darwin ]; then open "$page"
   elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$page" >/dev/null 2>&1 &
   else echo "Open this in your browser: $page"
   fi
