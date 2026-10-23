@@ -82,7 +82,7 @@ The idea running through all of it is **chain of custody**: data leaves a machin
 
 ### 2.5 Release hardening
 - Auto-update with signed update manifests. Tauri's updater checks an Ed25519 signature before installing anything.
-- Code signing for Windows, applying first to the SignPath Foundation's free programme for open-source projects.
+- Code signing for Windows, applying first to the SignPath Foundation's free program for open-source projects.
 - Notarisation for macOS if an Apple developer account is ever taken on.
 
 ### 2.6 Break it
@@ -93,7 +93,7 @@ The idea running through all of it is **chain of custody**: data leaves a machin
 
 - ~~**Name**~~: settled in 2.0. The project began as "Offload", which turned out to be shared by several tools doing similar jobs, and was renamed **Decant**.
 - **Google client ID** (2.3): created by the project owner in Google's developer console.
-- **Code signing** (2.5): through the SignPath Foundation's free programme for open-source projects, if accepted. Until then, the installers carry no publisher signature.
+- **Code signing** (2.5): through the SignPath Foundation's free program for open-source projects, if accepted. Until then, the installers carry no publisher signature.
 
 ## Testing
 
