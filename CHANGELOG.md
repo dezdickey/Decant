@@ -12,6 +12,7 @@ Decant becomes installable software for Windows, macOS and Linux, with rclone bu
 ### Added
 - Desktop app built with Tauri, wrapping the existing interface, with rclone included in the installer.
 - A tray icon. Closing the window while an upload or check runs keeps it running in the tray; closing with nothing running quits, and stops rclone.
+- The app shows its own version beside rclone's, at the top right, so a bug report can name the release.
 - Freed files go to the **Recycle Bin** (Trash on macOS and Linux) by default, with permanent deletion as an explicit choice. The dialog says that the space returns only once the bin is emptied.
 - `THREAT_MODEL.md`, `SECURITY.md`, and decision records in `docs/decisions/`.
 - CI on every pull request and every push to `main`: interface tests, Rust tests, Clippy, `cargo audit` and CodeQL. OpenSSF Scorecard runs on pushes to `main` and weekly, and Dependabot checks dependencies weekly.
