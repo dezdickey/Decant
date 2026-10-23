@@ -26,6 +26,7 @@ Decant becomes installable software for Windows, macOS and Linux, with rclone bu
 - Before removing a file, the core proves it lies inside the folder being offloaded, checking the text of the path and then the resolved real path.
 - The page may call exactly three native commands, granted to its one window.
 - Every GitHub Action is pinned to a commit, and the bundled rclone is checked against its published SHA-256.
+- Release installers are built from scratch, with no build cache, so nothing left over from an earlier run can end up inside them.
 - The core's HTTP client is built without TLS. It only ever talks to rclone on 127.0.0.1, so leaving TLS out removes its libraries from the app entirely, along with two advisories `cargo audit` found in them.
 
 ### Fixed

@@ -72,7 +72,7 @@ Decant moves files from a computer to a cloud, checks every copy by checksum, an
 |---|---|
 | A tampered rclone binary | `scripts/fetch-rclone.sh` pins the version and checks the download against rclone's published SHA-256. |
 | A vulnerable or malicious crate | `Cargo.lock` is committed; `cargo audit` runs in CI; Dependabot proposes updates. |
-| A tampered build | Releases are built by GitHub Actions and carry build provenance, SHA-256 checksums and an SBOM. |
+| A tampered build | Releases are built by GitHub Actions and carry build provenance, SHA-256 checksums and an SBOM. Release builds use no cache, so a poisoned cache from an earlier run can't reach an installer. |
 
 ## How 2.0 was attacked
 
