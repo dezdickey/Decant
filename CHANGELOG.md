@@ -32,4 +32,4 @@ Decant becomes installable software for Windows, macOS and Linux, with rclone bu
 
 - Upload a folder to any rclone remote, with a plan before anything moves, live progress, a checksum check of every file, and removal of verified local copies.
 - Runs as a page opened from disk, talking to rclone's remote-control server with a per-launch password.
-- A comparison by size alone is labelled as size-only and never unlocks removal. rclone names a missing hash type `none`, which testing caught being read as a real checksum before 1.0 was finished.
+- A comparison by size alone is labeled as size-only and never unlocks removal. rclone names a missing hash type `none`, which testing caught being read as a real checksum before 1.0 was finished.

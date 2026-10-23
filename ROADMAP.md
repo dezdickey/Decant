@@ -82,7 +82,7 @@ The idea running through all of it is **chain of custody**: data leaves a machin
 
 ### 2.5 Release hardening
 - Auto-update with signed update manifests. Tauri's updater checks an Ed25519 signature before installing anything.
-- Code signing for Windows, applying first to the SignPath Foundation's free programme for open-source projects.
+- Code signing for Windows, applying first to the SignPath Foundation's free program for open-source projects.
 - Notarisation for macOS if an Apple developer account is ever taken on.
 
 ### 2.6 Break it

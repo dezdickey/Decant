@@ -89,7 +89,7 @@ Each stage records what was tried against its new parts. For 2.0:
 
 **Two bugs found by testing, both fixed: the first in v1, before 2.0 began, and the second in 2.0 itself.**
 
-- **A size-only check could read as a checksum match.** When the cloud and the disk share no checksum, rclone reports the hash type as the word `none`, and the page treated that as a real checksum, reporting "every file matches" after comparing sizes only. Removal stayed locked in that test only because the remote was encrypted. Size-only results are now labelled as such and can never unlock removal. (Found while testing v1.)
+- **A size-only check could read as a checksum match.** When the cloud and the disk share no checksum, rclone reports the hash type as the word `none`, and the page treated that as a real checksum, reporting "every file matches" after comparing sizes only. Removal stayed locked in that test only because the remote was encrypted. Size-only results are now labeled as such and can never unlock removal. (Found while testing v1.)
 - **Closing the window never quit.** rclone counts every call as a running job, including the call asking what is running, so the app always believed an upload was in progress and hid in the tray. It now tracks the background jobs it started. (Found while testing the desktop app.)
 
 ## Known gaps

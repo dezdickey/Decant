@@ -160,7 +160,7 @@ To run the interface tests headless, pass Chrome the page's full path and a thro
 google-chrome --headless=new --user-data-dir="$(mktemp -d)" --virtual-time-budget=3000 --dump-dom "$PWD/tests/index.html" | grep -o '<title>[^<]*'
 ```
 
-## Licence
+## License
 
 Decant is licensed under the [Apache License 2.0](LICENSE). It bundles rclone, which is MIT-licensed.
 
