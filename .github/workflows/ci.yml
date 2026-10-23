@@ -56,3 +56,18 @@ jobs:
       - name: cargo audit
         working-directory: src-tauri
         run: cargo audit
+
+  # Every shell script must be stored as executable in git, so macOS and
+  # Linux can run it straight from a checkout.
+  scripts:
+    name: Shell scripts are executable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Every .sh file is marked executable in git
+        run: |
+          bad=$(git ls-files -s -- '*.sh' | awk '$1 != "100755" { print $4 }' | paste -sd ' ' -)
+          if [ -n "$bad" ]; then
+            echo "::error::Not marked executable: $bad. Fix with: git update-index --chmod=+x <file>"
+            exit 1
+          fi
