@@ -1,9 +1,9 @@
-# Offload launcher for Windows.
+# Decant launcher for Windows.
 #
 # Starts rclone's remote-control server on this computer only (127.0.0.1),
 # protected by a password made fresh for this launch, then opens the UI.
 # If a server from an earlier launch is still running, it is reused, so
-# an upload in progress is never interrupted by opening Offload again.
+# an upload in progress is never interrupted by opening Decant again.
 
 param(
     # Start (or find) the server but do not open a browser tab.
@@ -87,7 +87,7 @@ if (Test-Session $existing) {
 $rclone = Find-Rclone
 if (-not $rclone) {
     Write-Host ''
-    Write-Host 'Offload needs rclone, and it is not installed.' -ForegroundColor Yellow
+    Write-Host 'Decant needs rclone, and it is not installed.' -ForegroundColor Yellow
     Write-Host 'Install it with:   winget install Rclone.Rclone'
     Write-Host 'then connect your cloud once with:   rclone config'
     Write-Host 'More at https://rclone.org/install/'
@@ -96,7 +96,7 @@ if (-not $rclone) {
 
 New-Item -ItemType Directory -Force $logDir | Out-Null
 $port = Get-FreePort
-$session = [ordered]@{ port = $port; user = 'offload'; pass = (New-Secret) }
+$session = [ordered]@{ port = $port; user = 'decant'; pass = (New-Secret) }
 
 # The password goes to rclone through the environment rather than the
 # command line, where any program could read it from the process list.
@@ -120,7 +120,7 @@ $json = $session | ConvertTo-Json -Compress
 Set-Content -Path $sessionFile -Encoding UTF8 -Value @(
     '// Written by the launcher. Holds the password to the local server for this',
     '// run only: it is replaced on every launch and is never committed.',
-    "window.OFFLOAD_SESSION = $json;"
+    "window.DECANT_SESSION = $json;"
 )
 
 $s = [pscustomobject]$session

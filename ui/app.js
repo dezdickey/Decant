@@ -1,5 +1,5 @@
 'use strict';
-// Offload's page. Everything it does goes through rclone's remote-control API
+// Decant's page. Everything it does goes through rclone's remote-control API
 // (rc.js): listing folders, copying, live progress, checksum checks, deleting.
 // There is no other back end.
 
@@ -30,8 +30,8 @@
   // localStorage holds only conveniences: the last folders, settings, recent
   // runs. A page that cannot store (private window) still works.
   const store = {
-    get(k, d) { try { const v = localStorage.getItem('offload.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
-    set(k, v) { try { localStorage.setItem('offload.' + k, JSON.stringify(v)); } catch (e) { /* fine */ } },
+    get(k, d) { try { const v = localStorage.getItem('decant.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('decant.' + k, JSON.stringify(v)); } catch (e) { /* fine */ } },
   };
 
   let toastTimer = 0;
@@ -71,7 +71,7 @@
   const DRIVE_DAILY = 750 * 1024 ** 3;
 
   const state = {
-    os: '', version: '',
+    os: '', version: '', appVersion: '',
     remotes: [],                 // { name, type, target }
     src: '', srcDisk: null, srcFiles: null, srcErr: null,
     dst: { remote: '', path: '' }, dstAbout: null, dstFiles: null, dstErr: null, dstNew: false,
@@ -94,6 +94,13 @@
     $('conn-text').textContent = text;
   }
 
+  // The desktop app names its own version beside rclone's, so a bug report
+  // can say which release it came from. The browser version has no app
+  // version to show.
+  function versionText() {
+    return (state.appVersion ? 'Decant ' + state.appVersion + ' · ' : '') + 'rclone ' + state.version;
+  }
+
   function gate(detail) {
     $('app').hidden = true;
     $('gate').hidden = false;
@@ -105,7 +112,7 @@
   async function heartbeat() {
     try {
       await RC.call('core/version', null, { timeout: 4000 });
-      if (!state.online) { state.online = true; setConn('ok', 'rclone ' + state.version); renderAll(); }
+      if (!state.online) { state.online = true; setConn('ok', versionText()); renderAll(); }
     } catch (e) {
       if (e.status === 0 && state.online) {
         state.online = false;
@@ -265,7 +272,7 @@
     const sum = $('dst-sum');
     sum.className = 'sum';
     if (!state.remotes.length) {
-      sum.replaceChildren('Connect a cloud once in a terminal with ', el('code', { text: 'rclone config' }), ', then reopen Offload.');
+      sum.replaceChildren('Connect a cloud once in a terminal with ', el('code', { text: 'rclone config' }), ', then reopen Decant.');
       $('dst-disk').hidden = true; return;
     }
     if (state.dstErr) {
@@ -681,9 +688,9 @@
   function freeBlocker() {
     const c = state.check;
     if (!c || !c.match.length) return 'Check the copies first.';
-    if (!c.hash || c.hash === 'none') return 'This cloud and your disk share no checksum, so the copies could only be compared by size. Offload only frees space when every byte has been compared.';
+    if (!c.hash || c.hash === 'none') return 'This cloud and your disk share no checksum, so the copies could only be compared by size. Decant only frees space when every byte has been compared.';
     const home = localHome(state.dst.remote, state.dst.path, 0);
-    if (home.unsure) return 'Offload cannot tell where this remote keeps its files, so it will not delete anything for it.';
+    if (home.unsure) return 'Decant cannot tell where this remote keeps its files, so it will not delete anything for it.';
     if (home.path != null) {
       const norm = (p) => p.replace(/\//g, '\\').replace(/\\+$/, '').toLowerCase() + '\\';
       const a = norm(state.src), b = norm(home.path);
@@ -729,24 +736,42 @@
       el('span', { class: 's', text: Fmt.bytes(it.size) }),
       el('span', { class: 'st' }))));
     $('free-lead').textContent = 'These files are in ' + c.key.split('\n')[1] + ' and match their copies exactly. Remove them from ' + state.src + '?';
-    $('free-warn').textContent = 'They are deleted for good and do not go to the Recycle Bin. The cloud copies stay as they are. Any file that has changed since it was checked (' + Fmt.ago(c.at) + ') is skipped.';
+    $('free-mode').hidden = !RC.desktop;
     $('free-ok').checked = false;
     $('free-all').checked = true;
     $('free-progress').hidden = true;
     $('free-cancel').textContent = 'Cancel';
     const update = () => {
+      const bin = freeMode() === 'bin';
       const picked = [...listEl.querySelectorAll('input:checked')];
       const bytes = picked.reduce((a, i) => a + +i.dataset.size, 0);
-      $('free-total').textContent = Fmt.count(picked.length, 'file') + ', frees ' + Fmt.bytes(bytes);
-      $('free-go').textContent = picked.length ? 'Delete ' + Fmt.count(picked.length, 'file') : 'Delete';
+      $('free-total').textContent = Fmt.count(picked.length, 'file') + (bin ? ', ' + Fmt.bytes(bytes) + ' to the Recycle Bin' : ', frees ' + Fmt.bytes(bytes));
+      $('free-warn').textContent = (bin
+        ? 'They move to the Recycle Bin, so they can be restored. The space comes back once you empty it.'
+        : 'They are deleted for good and do not go to the Recycle Bin.') +
+        ' The cloud copies stay as they are. Any file that has changed since it was checked (' + Fmt.ago(c.at) + ') is skipped.';
+      $('free-ok-text').textContent = bin
+        ? 'I understand these files are removed from this computer'
+        : 'I understand these files are deleted from this computer for good';
+      const verb = bin ? 'Move ' : 'Delete ';
+      $('free-go').textContent = picked.length ? verb + Fmt.count(picked.length, 'file') : verb.trim();
       $('free-go').disabled = !picked.length || !$('free-ok').checked || dlg.dataset.busy === '1';
     };
     listEl.onchange = update;
     $('free-ok').onchange = update;
+    for (const r of document.querySelectorAll('input[name="free-mode"]')) r.onchange = update;
     $('free-all').onchange = () => { for (const i of listEl.querySelectorAll('input')) i.checked = $('free-all').checked; update(); };
     dlg.dataset.busy = '';
     update();
     dlg.showModal();
+  }
+
+  // In the desktop app freed files go to the Recycle Bin unless the dialog
+  // says otherwise. The browser version can only delete outright.
+  function freeMode() {
+    if (!RC.desktop) return 'permanent';
+    const r = document.querySelector('input[name="free-mode"]:checked');
+    return r ? r.value : 'bin';
   }
 
   async function doFree() {
@@ -754,9 +779,11 @@
     const c = state.check;
     const picked = [...$('free-list').querySelectorAll('input:checked')];
     if (!picked.length || !$('free-ok').checked || !c) return;
+    const bin = freeMode() === 'bin';
     dlg.dataset.busy = '1';
     $('free-go').disabled = true;
     for (const i of $('free-list').querySelectorAll('input')) i.disabled = true;
+    for (const r of document.querySelectorAll('input[name="free-mode"]')) r.disabled = true;
     $('free-all').disabled = true; $('free-ok').disabled = true;
     $('free-cancel').disabled = true; $('free-x').disabled = true;
     $('free-progress').hidden = false;
@@ -773,27 +800,29 @@
         if (!item || !was || item.Size !== was.size || item.ModTime !== was.mod) {
           skipped++; st.textContent = 'changed, kept'; st.className = 'st badge differs';
         } else {
-          await RC.call('operations/deletefile', { fs: state.src, remote: path });
-          done++; freed += item.Size; st.textContent = 'deleted'; st.className = 'st badge there';
+          if (RC.desktop) await RC.free(state.src, path, !bin);
+          else await RC.call('operations/deletefile', { fs: state.src, remote: path });
+          done++; freed += item.Size; st.textContent = bin ? 'in Recycle Bin' : 'deleted'; st.className = 'st badge there';
         }
       } catch (e) {
         failed++; st.textContent = RC.explain(e).title; st.className = 'st badge bad';
       }
       $('free-fill').style.transform = 'scaleX(' + ((done + skipped + failed) / picked.length) + ')';
-      $('free-status').textContent = 'Freed ' + Fmt.bytes(freed) + ' · ' + (done + skipped + failed) + ' of ' + picked.length;
+      $('free-status').textContent = (bin ? 'Moved ' : 'Freed ') + Fmt.bytes(freed) + ' · ' + (done + skipped + failed) + ' of ' + picked.length;
     }
     dlg.dataset.busy = '';
     $('free-all').disabled = false; $('free-ok').disabled = false;
     $('free-cancel').disabled = false; $('free-x').disabled = false;
+    for (const r of document.querySelectorAll('input[name="free-mode"]')) r.disabled = false;
     $('free-cancel').textContent = 'Close';
-    addHistory({ kind: 'free', ok: !failed, src: state.src, dst: dstLabel(), bytes: freed, files: done,
-      err: failed ? failed + ' could not be deleted' : skipped ? skipped + ' changed and were kept' : '' });
-    // What was deleted cannot be freed again, and what changed needs checking
+    addHistory({ kind: 'free', bin, ok: !failed, src: state.src, dst: dstLabel(), bytes: freed, files: done,
+      err: failed ? failed + ' could not be removed' : skipped ? skipped + ' changed and were kept' : '' });
+    // What was removed cannot be freed again, and what changed needs checking
     // again before it can be.
-    const gone = new Set(picked.filter((b) => /deleted|changed/.test(b.closest('li').querySelector('.st').textContent)).map((b) => b.dataset.path));
+    const gone = new Set(picked.filter((b) => /deleted|Recycle Bin|changed/.test(b.closest('li').querySelector('.st').textContent)).map((b) => b.dataset.path));
     c.match = c.match.filter((p) => !gone.has(p));
     store.set('check', c);
-    toast('Freed ' + Fmt.bytes(freed) + ' on this computer.');
+    toast(bin ? 'Moved ' + Fmt.bytes(freed) + ' to the Recycle Bin. Empty it to get the space back.' : 'Freed ' + Fmt.bytes(freed) + ' on this computer.');
     setSource(state.src);
   }
 
@@ -814,11 +843,12 @@
       const what = h.kind === 'check'
         ? Fmt.count(h.files || 0, 'file') + ' against ' + h.dst
         : h.kind === 'free'
-          ? Fmt.bytes(h.bytes) + ' from ' + Fmt.base(h.src) + ' (' + Fmt.count(h.files || 0, 'file') + ')'
+          ? Fmt.bytes(h.bytes) + ' from ' + Fmt.base(h.src) + (h.bin ? ' to the Recycle Bin' : '') + ' (' + Fmt.count(h.files || 0, 'file') + ')'
           : Fmt.bytes(h.bytes) + ' from ' + Fmt.base(h.src) + ' to ' + h.dst + (h.secs ? ' in ' + Fmt.duration(h.secs) : '');
+      const word = h.kind === 'free' && h.bin ? 'Moved' : verb[h.kind];
       return el('li', null,
         el('span', { class: 'i ' + (h.ok ? 'ok' : 'bad'), text: h.ok ? '✓' : '!' }),
-        el('span', { class: 'w', text: verb[h.kind] + ' ' + what + (h.err ? ' · ' + h.err : '') }),
+        el('span', { class: 'w', text: word + ' ' + what + (h.err ? ' · ' + h.err : '') }),
         el('span', { class: 't', text: Fmt.ago(h.at) }));
     }));
   }
@@ -947,12 +977,12 @@
 
     $('btn-quit').addEventListener('click', async () => {
       const running = state.job && !state.job.finished;
-      const ok = await ask('Stop Offload\'s server?',
+      const ok = await ask('Stop Decant\'s server?',
         running ? 'An upload or check is still running, and it stops too. Files already uploaded stay in the cloud.'
-                : 'This page stops working until you open Offload again.', 'Stop server');
+                : 'This page stops working until you open Decant again.', 'Stop server');
       if (!ok) return;
       try { await RC.call('core/quit', null, { timeout: 3000 }); } catch (e) { /* it is gone either way */ }
-      gate('The server was stopped. Open Offload again to carry on.');
+      gate('The server was stopped. Open Decant again to carry on.');
     });
     $('gate-retry').addEventListener('click', () => location.reload());
 
@@ -964,16 +994,24 @@
   }
 
   async function boot() {
+    if (RC.desktop) {
+      // The app owns rclone's lifetime, so there is no server to stop by hand.
+      $('btn-quit').hidden = true;
+      $('gate-text').textContent = 'Decant could not start its copy of rclone, so it cannot do anything yet.';
+      const info = await RC.info();
+      if (info.error) { gate(info.error); return; }
+      state.appVersion = info.version || '';
+    }
     if (!RC.has) { gate('No session from the launcher was found next to this page.'); return; }
     try {
       const v = await RC.call('core/version', null, { timeout: 4000 });
       state.version = v.version; state.os = v.os || '';
     } catch (e) {
-      gate(e.status === 0 ? 'The server from the last launch is no longer running.' : RC.explain(e).detail);
+      gate(e.status === 0 && !RC.desktop ? 'The server from the last launch is no longer running.' : RC.explain(e).detail);
       return;
     }
     $('app').hidden = false;
-    setConn('ok', 'rclone ' + state.version);
+    setConn('ok', versionText());
     wire();
     initOptions();
     try { await loadRemotes(); } catch (e) { toast(RC.explain(e).title); }
