@@ -17,6 +17,7 @@ Decant becomes installable software for Windows, macOS and Linux, with rclone bu
 - `THREAT_MODEL.md`, `SECURITY.md`, and decision records in `docs/decisions/`.
 - CI on every pull request and every push to `main`: interface tests, Rust tests, Clippy, `cargo audit` and CodeQL. OpenSSF Scorecard runs on pushes to `main` and weekly, and Dependabot checks dependencies weekly.
 - A release pipeline: installers for three platforms, SHA-256 checksums, an SBOM, and GitHub build provenance.
+- The macOS app carries an ad-hoc signature, so Apple Silicon Macs can open it once you allow it in System Settings. A Developer ID signature, which also proves who made the app, isn't planned yet.
 
 ### Security
 - The interface can no longer reach rclone. A Rust core holds the password, relays only an allowlist of 14 calls, trims `_config` to the one setting the page uses, and strips sign-in tokens from `config/get` replies.
