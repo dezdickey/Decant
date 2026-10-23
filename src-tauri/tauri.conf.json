@@ -27,6 +27,8 @@
     "active": true,
     "targets": "all",
     "category": "Utility",
+    "publisher": "dezdickey",
+    "copyright": "Copyright 2026 dezdickey",
     "shortDescription": "Move files to the cloud, prove every one arrived intact, then free the space.",
     "longDescription": "Decant uploads a folder to any cloud rclone supports, compares every file with its cloud copy by checksum, and only then offers to remove the local originals.",
     "license": "Apache-2.0",
