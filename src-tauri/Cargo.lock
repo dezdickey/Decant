@@ -584,7 +584,7 @@ dependencies = [
 name = "decant"
 version = "2.0.0"
 dependencies = [
- "getrandom 0.2.17",
+ "getrandom 0.4.3",
  "proptest",
  "serde",
  "serde_json",
@@ -1098,17 +1098,6 @@ checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
-]
-
-[[package]]
-name = "getrandom"
-version = "0.2.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff2abc00be7fca6ebc474524697ae276ad847ad0a6b3faa4bcb027e9a4614ad0"
-dependencies = [
- "cfg-if",
- "libc",
- "wasi",
 ]
 
 [[package]]
