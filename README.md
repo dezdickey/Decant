@@ -48,7 +48,9 @@ Details: [THREAT_MODEL.md](THREAT_MODEL.md) · [SECURITY.md](SECURITY.md) · [de
 
 ## Getting started
 
-**Desktop app.** Download the installer for your system from [Releases](https://github.com/dezdickey/Decant/releases). rclone comes inside it. Until in-app sign-in arrives in 2.3, connect your cloud once with rclone itself:
+**Desktop app.** Download the installer for your system from [Releases](https://github.com/dezdickey/Decant/releases). rclone comes inside it. The installers are not code-signed yet (that is planned for 2.5), so the first time you run one, Windows shows *Windows protected your PC*: choose **More info**, then **Run anyway**. On macOS, allow it in System Settings under Privacy & Security. Each release lists how to check a download is genuine before you run it.
+
+Until in-app sign-in arrives in 2.3, connect your cloud once with rclone itself:
 
 ```
 rclone config
@@ -102,8 +104,10 @@ There is no back end of Decant's own. rclone ships a [remote-control API](https:
 ## Limits
 
 - rclone cannot pause an upload. **Stop** ends it, and starting again skips every finished file. A file that was halfway up starts again from the beginning.
+- **A dropped connection ends the upload.** Files that had not started yet fail at once, and nothing retries them. Run the upload again once you are back online: everything that finished is skipped. A real overnight upload showed this when the Wi-Fi dropped.
+- **Decant does not keep the computer awake.** For a long upload, keep the computer plugged in and set it not to sleep.
 - Encrypted (`crypt`) remotes are compared by size only, so Decant will not free space for them. rclone's `cryptcheck` command can verify them properly from a terminal.
-- The app is tested by hand on Windows. CI builds the macOS and Linux installers, but they are not exercised by hand.
+- The app is tested by hand on Windows. The release workflow also builds macOS and Linux installers, but nobody has run those by hand yet.
 
 ## Building from source
 
@@ -134,7 +138,7 @@ ui/                        the interface, shared by the app and the browser vers
   format.js                sizes, speeds and durations in words
 tests/index.html           tests for format.js and rc.js, run in a browser
 scripts/fetch-rclone.sh    fetches and verifies the bundled rclone
-Decant.cmd, start.ps1     browser version launcher (Windows)
+Decant.cmd, start.ps1      browser version launcher (Windows)
 start.sh                   browser version launcher (macOS, Linux)
 docs/decisions/            why things are the way they are
 .github/                   CI, CodeQL, Scorecard, Dependabot, release pipeline
