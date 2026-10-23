@@ -71,7 +71,7 @@
   const DRIVE_DAILY = 750 * 1024 ** 3;
 
   const state = {
-    os: '', version: '',
+    os: '', version: '', appVersion: '',
     remotes: [],                 // { name, type, target }
     src: '', srcDisk: null, srcFiles: null, srcErr: null,
     dst: { remote: '', path: '' }, dstAbout: null, dstFiles: null, dstErr: null, dstNew: false,
@@ -94,6 +94,13 @@
     $('conn-text').textContent = text;
   }
 
+  // The desktop app names its own version beside rclone's, so a bug report
+  // can say which release it came from. The browser version has no app
+  // version to show.
+  function versionText() {
+    return (state.appVersion ? 'Decant ' + state.appVersion + ' · ' : '') + 'rclone ' + state.version;
+  }
+
   function gate(detail) {
     $('app').hidden = true;
     $('gate').hidden = false;
@@ -105,7 +112,7 @@
   async function heartbeat() {
     try {
       await RC.call('core/version', null, { timeout: 4000 });
-      if (!state.online) { state.online = true; setConn('ok', 'rclone ' + state.version); renderAll(); }
+      if (!state.online) { state.online = true; setConn('ok', versionText()); renderAll(); }
     } catch (e) {
       if (e.status === 0 && state.online) {
         state.online = false;
@@ -993,6 +1000,7 @@
       $('gate-text').textContent = 'Decant could not start its copy of rclone, so it cannot do anything yet.';
       const info = await RC.info();
       if (info.error) { gate(info.error); return; }
+      state.appVersion = info.version || '';
     }
     if (!RC.has) { gate('No session from the launcher was found next to this page.'); return; }
     try {
@@ -1003,7 +1011,7 @@
       return;
     }
     $('app').hidden = false;
-    setConn('ok', 'rclone ' + state.version);
+    setConn('ok', versionText());
     wire();
     initOptions();
     try { await loadRemotes(); } catch (e) { toast(RC.explain(e).title); }
