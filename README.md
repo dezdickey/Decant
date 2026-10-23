@@ -46,6 +46,8 @@ Details: [THREAT_MODEL.md](THREAT_MODEL.md) · [SECURITY.md](SECURITY.md) · [de
 
    ![The check result: every file matches by MD5 checksum, and Free up space is now offered](docs/check.png)
 
+   ![Free up space: only the files that matched, the Recycle Bin by default with permanent deletion as a separate choice, and a confirmation before anything is removed](docs/free.png)
+
 ## Getting started
 
 **Desktop app.** Download the installer for your system from [Releases](https://github.com/dezdickey/Decant/releases). rclone comes inside it. The installers are not code-signed yet (that is planned for 2.5), so the first time you run one on Windows, a confirmation screen appears: choose **More info**, then **Run anyway**. On macOS, allow it in System Settings under Privacy & Security. Each release lists how to check a download is genuine before you run it.
