@@ -109,7 +109,7 @@ There is no back end of Decant's own. rclone ships a [remote-control API](https:
 - **A dropped connection ends the upload.** Files that had not started yet fail at once, and nothing retries them. Run the upload again once you are back online: everything that finished is skipped. A real overnight upload showed this when the Wi-Fi dropped.
 - **Decant does not keep the computer awake.** For a long upload, keep the computer plugged in and set it not to sleep.
 - Encrypted (`crypt`) remotes are compared by size only, so Decant will not free space for them. rclone's `cryptcheck` command can verify them properly from a terminal.
-- The app is tested by hand on Windows. The release workflow also builds macOS and Linux installers, but nobody has run those by hand yet.
+- The app is tested by hand on Windows, and its Linux `.deb` was tested on Linux Mint 22.3. The macOS app, the AppImage and the `.rpm` are built and checked the same way, but nobody has run them yet.
 
 ## Building from source
 
