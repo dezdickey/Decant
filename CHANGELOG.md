@@ -2,7 +2,7 @@
 
 Each version is one stage of the [roadmap](ROADMAP.md). The format follows [Keep a Changelog](https://keepachangelog.com/), and versions follow [semantic versioning](https://semver.org/).
 
-## [2.0.0] — 2026-10-26 — Desktop
+## [2.0.0] — 2026-10-28 — Desktop
 
 Decant becomes installable software for Windows, macOS and Linux, with rclone bundled.
 
