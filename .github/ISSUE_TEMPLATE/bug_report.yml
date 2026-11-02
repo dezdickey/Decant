@@ -55,6 +55,6 @@ body:
     attributes:
       label: Log
       description: |
-        The lines around the problem from `rclone.log`, which on Windows is in `%LOCALAPPDATA%\io.github.dezdickey.decant\logs`.
+        The lines around the problem from `rclone.log`, which on Windows is in `%LOCALAPPDATA%\io.github.dezdickey.decant\logs` and on Linux in `~/.local/share/io.github.dezdickey.decant/logs`.
         Logs contain file and folder names, so remove anything private first. Never paste your rclone config: it holds your cloud sign-in tokens.
       render: text

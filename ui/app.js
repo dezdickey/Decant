@@ -86,6 +86,7 @@
   const dstFs = () => state.dst.remote ? state.dst.remote + ':' + state.dst.path : '';
   const dstLabel = () => state.dst.remote + ':' + (state.dst.path ? state.dst.path : '');
   const pairKey = () => state.src + '\n' + dstFs();
+  const binWord = () => Runs.binName(state.os);
 
   // ---- connection ----------------------------------------------------------
 
@@ -781,10 +782,10 @@
       const bin = freeMode() === 'bin';
       const picked = [...listEl.querySelectorAll('input:checked')];
       const bytes = picked.reduce((a, i) => a + +i.dataset.size, 0);
-      $('free-total').textContent = Fmt.count(picked.length, 'file') + (bin ? ', ' + Fmt.bytes(bytes) + ' to the Recycle Bin' : ', frees ' + Fmt.bytes(bytes));
+      $('free-total').textContent = Fmt.count(picked.length, 'file') + (bin ? ', ' + Fmt.bytes(bytes) + ' to the ' + binWord() : ', frees ' + Fmt.bytes(bytes));
       $('free-warn').textContent = (bin
-        ? 'They move to the Recycle Bin, so they can be restored. The space comes back once you empty it.'
-        : 'They are deleted for good and do not go to the Recycle Bin.') +
+        ? 'They move to the ' + binWord() + ', so they can be restored. The space comes back once you empty it.'
+        : 'They are deleted for good and do not go to the ' + binWord() + '.') +
         ' The cloud copies stay as they are. Any file that has changed since it was checked (' + Fmt.ago(c.at) + ') is skipped.';
       $('free-ok-text').textContent = bin
         ? 'I understand these files are removed from this computer'
@@ -838,7 +839,7 @@
         } else {
           if (RC.desktop) await RC.free(state.src, path, !bin);
           else await RC.call('operations/deletefile', { fs: state.src, remote: path });
-          done++; freed += item.Size; st.textContent = bin ? 'in Recycle Bin' : 'deleted'; st.className = 'st badge there';
+          done++; freed += item.Size; st.textContent = bin ? 'in ' + binWord() : 'deleted'; st.className = 'st badge there';
         }
       } catch (e) {
         failed++; st.textContent = RC.explain(e).title; st.className = 'st badge bad';
@@ -855,10 +856,10 @@
       err: failed ? failed + ' could not be removed' : skipped ? skipped + ' changed and were kept' : '' });
     // What was removed cannot be freed again, and what changed needs checking
     // again before it can be.
-    const gone = new Set(picked.filter((b) => /deleted|Recycle Bin|changed/.test(b.closest('li').querySelector('.st').textContent)).map((b) => b.dataset.path));
+    const gone = new Set(picked.filter((b) => /deleted|Recycle Bin|Trash|changed/.test(b.closest('li').querySelector('.st').textContent)).map((b) => b.dataset.path));
     c.match = c.match.filter((p) => !gone.has(p));
     store.set('check', c);
-    toast(bin ? 'Moved ' + Fmt.bytes(freed) + ' to the Recycle Bin. Empty it to get the space back.' : 'Freed ' + Fmt.bytes(freed) + ' on this computer.');
+    toast(bin ? 'Moved ' + Fmt.bytes(freed) + ' to the ' + binWord() + '. Empty it to get the space back.' : 'Freed ' + Fmt.bytes(freed) + ' on this computer.');
     setSource(state.src);
   }
 
@@ -879,7 +880,7 @@
       const what = h.kind === 'check'
         ? Fmt.count(h.files || 0, 'file') + ' against ' + h.dst
         : h.kind === 'free'
-          ? Fmt.bytes(h.bytes) + ' from ' + Fmt.base(h.src) + (h.bin ? ' to the Recycle Bin' : '') + ' (' + Fmt.count(h.files || 0, 'file') + ')'
+          ? Fmt.bytes(h.bytes) + ' from ' + Fmt.base(h.src) + (h.bin ? ' to the ' + binWord() : '') + ' (' + Fmt.count(h.files || 0, 'file') + ')'
           : Fmt.bytes(h.bytes) + ' from ' + Fmt.base(h.src) + ' to ' + h.dst + (h.secs ? ' in ' + Fmt.duration(h.secs) : '');
       const word = h.kind === 'free' && h.bin ? 'Moved' : verb[h.kind];
       return el('li', null,
@@ -1048,6 +1049,9 @@
     }
     $('app').hidden = false;
     setConn('ok', versionText());
+    // Words that depend on the system: where freed files go, and an example folder.
+    $('src-path').placeholder = 'A folder, e.g. ' + Runs.examplePath(state.os);
+    for (const n of document.querySelectorAll('.bin-name')) n.textContent = binWord();
     wire();
     initOptions();
     try { await loadRemotes(); } catch (e) { toast(RC.explain(e).title); }
