@@ -24,11 +24,12 @@
 </head>
 <body>
 <h1>Decant tests</h1>
-<p class="muted">Checks <code>ui/format.js</code> and <code>ui/rc.js</code>, which have no DOM in them on purpose. Needs no server: open this file in a browser. The result is also in the page title, for running it headless.</p>
+<p class="muted">Checks <code>ui/format.js</code>, <code>ui/runs.js</code> and <code>ui/rc.js</code>, which have no DOM in them on purpose. Needs no server: open this file in a browser. The result is also in the page title, for running it headless.</p>
 <p class="sum" id="sum">Running…</p>
 <div id="out"></div>
 
 <script src="../ui/format.js"></script>
+<script src="../ui/runs.js"></script>
 <script src="../ui/rc.js"></script>
 <script>
 'use strict';
@@ -185,6 +186,53 @@
     eq(err instanceof RC.RcError, true, 'call rejects with an RcError');
     eq(err && err.message, 'no session', 'saying there is no session');
     eq(err && err.status, 0, 'with status 0, like an unreachable server');
+  });
+
+  await section('Runs.binName', () => {
+    for (const [os, want] of [['windows', 'Recycle Bin'], ['linux', 'Trash'], ['darwin', 'Trash'], ['freebsd', 'Trash'], ['', 'Recycle Bin']]) {
+      eq(Runs.binName(os), want, 'binName(' + show(os) + ')');
+    }
+  });
+
+  await section('Runs.examplePath', () => {
+    for (const [os, want] of [['windows', 'E:\\Videos'], ['darwin', '/Users/you/Movies'], ['linux', '/home/you/Videos'], ['', 'E:\\Videos']]) {
+      eq(Runs.examplePath(os), want, 'examplePath(' + show(os) + ')');
+    }
+  });
+
+  await section('Runs.connect', () => {
+    const win = Runs.connect('windows', 'C:\\Users\\me\\AppData\\Local\\Decant\\decant-rclone.exe');
+    eq(win.where, 'PowerShell', 'Windows: in PowerShell');
+    eq(win.cmd, '& "C:\\Users\\me\\AppData\\Local\\Decant\\decant-rclone.exe" config', 'Windows: the full path, quoted, run with &');
+    eq(Runs.connect('linux', '/usr/bin/decant-rclone').cmd, 'decant-rclone config', 'Linux package: by name, since /usr/bin is on the command line');
+    eq(Runs.connect('linux', '/tmp/.mount_Decant/usr/bin/decant-rclone').cmd, '"/tmp/.mount_Decant/usr/bin/decant-rclone" config', 'AppImage: the full path, quoted');
+    eq(Runs.connect('darwin', '/Applications/Decant.app/Contents/MacOS/decant-rclone').where, 'a terminal', 'macOS: in a terminal');
+    eq(Runs.connect('windows', '').cmd, 'rclone config', 'browser version: the rclone the person installed');
+  });
+
+  await section('Runs.arrived', () => {
+    const src = [{ path: 'a', size: 10 }, { path: 'b', size: 20 }, { path: 'c', size: 30 }, { path: 'd', size: 40 }];
+    const got = (dst, before) => JSON.stringify(Runs.arrived(src, dst, before));
+    eq(got([{ path: 'a', size: 10 }, { path: 'b', size: 20 }], { files: 1, bytes: 10 }), '{"files":1,"bytes":20}', 'a was there before, so only b arrived');
+    eq(got([{ path: 'a', size: 10 }, { path: 'c', size: 5 }], { files: 1, bytes: 10 }), '{"files":0,"bytes":0}', 'a copy of the wrong size does not count');
+    eq(got([{ path: 'c', size: 30 }], { files: 0, bytes: 0 }), '{"files":1,"bytes":30}', 'a replaced file counts once it matches');
+    eq(got(src, { files: 0, bytes: 0 }), '{"files":4,"bytes":100}', 'everything arrived');
+    eq(got([{ path: 'b', size: 20 }, { path: 'x', size: 99 }], { files: 0, bytes: 0 }), '{"files":1,"bytes":20}', 'files only in the cloud do not count');
+    eq(got([], { files: 2, bytes: 30 }), '{"files":0,"bytes":0}', 'never below zero, even if the cloud lost files meanwhile');
+  });
+
+  await section('Runs.retrying', () => {
+    const at100 = [{ size: 25 * MB, percentage: 100 }, { size: 25 * MB, percentage: 100 }];
+    const m = {};
+    eq(Runs.retrying(m, { transfers: 0, bytes: 10 * MB, transferring: [{ size: 25 * MB, percentage: 40 }] }, 0), false, 'an upload under way: no warning');
+    eq(Runs.retrying(m, { transfers: 0, bytes: 50 * MB, transferring: at100 }, 30000), false, 'every file at 100% for 30 s: not yet');
+    eq(Runs.retrying(m, { transfers: 0, bytes: 50 * MB, transferring: at100 }, 61000), true, 'every file at 100% for over a minute, none finished: retrying');
+    eq(Runs.retrying(m, { transfers: 0, bytes: 52 * MB, transferring: [{ size: 25 * MB, percentage: 50 }] }, 62000), true, 'it stays while no file finishes');
+    eq(Runs.retrying(m, { transfers: 1, bytes: 53 * MB, transferring: [{ size: 25 * MB, percentage: 10 }] }, 63000), false, 'a file finishing clears it');
+    const r = {};
+    Runs.retrying(r, { transfers: 2, bytes: 100 * MB, transferring: at100 }, 0);
+    eq(Runs.retrying(r, { transfers: 2, bytes: 160 * MB, transferring: at100 }, 5000), true, 'more sent since the last file finished than the files in flight hold: retrying');
+    eq(Runs.retrying({}, { transfers: 0, bytes: 0, transferring: [] }, 999999), false, 'nothing in flight: no warning');
   });
 
   // Report: the title for headless runs, the page for people.
