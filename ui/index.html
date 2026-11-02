@@ -166,7 +166,7 @@
     <ul class="pick" id="free-list"></ul>
     <fieldset class="free-mode" id="free-mode" hidden>
       <legend>How to remove them</legend>
-      <label class="check"><input type="radio" name="free-mode" value="bin" checked> <span><b>Recycle Bin</b>: they can be restored, but the space only comes back once you empty it</span></label>
+      <label class="check"><input type="radio" name="free-mode" value="bin" checked> <span><b class="bin-name">Recycle Bin</b>: they can be restored, but the space only comes back once you empty it</span></label>
       <label class="check"><input type="radio" name="free-mode" value="permanent"> <span><b>Delete permanently</b>: the space comes back now, and they cannot be restored</span></label>
     </fieldset>
     <p class="warn-box" id="free-warn"></p>
@@ -196,6 +196,7 @@
 
 <script src="session.js"></script>
 <script src="format.js"></script>
+<script src="runs.js"></script>
 <script src="rc.js"></script>
 <script src="app.js"></script>
 </body>

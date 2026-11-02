@@ -126,8 +126,25 @@ impl Rclone {
     /// Start rclone's remote-control server. `config` overrides which rclone
     /// config file it reads; the app passes `None` and uses rclone's own.
     pub fn start(binary: &Path, log_file: &Path, config: Option<&Path>) -> Result<Rclone, String> {
-        let port = free_port()?;
-        let pass = secret()?;
+        // A port is free when it is picked but only taken once rclone binds
+        // it, so another program can claim it in between; the live tests,
+        // which start several rclones at once, hit this. rclone then exits as
+        // it starts, and starting again on a new port fixes it.
+        let mut tries = 0;
+        loop {
+            tries += 1;
+            match Self::start_once(binary, log_file, config) {
+                Err((_, true)) if tries < 3 => continue,
+                result => return result.map_err(|(msg, _)| msg),
+            }
+        }
+    }
+
+    /// One attempt. The error says whether rclone exited while starting,
+    /// which is worth another try on a new port.
+    fn start_once(binary: &Path, log_file: &Path, config: Option<&Path>) -> Result<Rclone, (String, bool)> {
+        let port = free_port().map_err(|e| (e, false))?;
+        let pass = secret().map_err(|e| (e, false))?;
         let mut cmd = Command::new(binary);
         if let Some(c) = config {
             cmd.arg("--config").arg(c);
@@ -149,7 +166,7 @@ impl Rclone {
             const CREATE_NO_WINDOW: u32 = 0x0800_0000;
             cmd.creation_flags(CREATE_NO_WINDOW);
         }
-        let child = cmd.spawn().map_err(|e| format!("could not start rclone: {e}"))?;
+        let child = cmd.spawn().map_err(|e| (format!("could not start rclone: {e}"), false))?;
         let auth = format!("Basic {}", base64(format!("decant:{pass}").as_bytes()));
         let mut rc = Rclone { child, base: format!("http://127.0.0.1:{port}/"), auth };
 
@@ -159,11 +176,11 @@ impl Rclone {
                 return Ok(rc);
             }
             if let Ok(Some(status)) = rc.child.try_wait() {
-                return Err(format!("rclone stopped as it started ({status}); see {}", log_file.display()));
+                return Err((format!("rclone stopped as it started ({status}); see {}", log_file.display()), true));
             }
             if started.elapsed() > Duration::from_secs(15) {
                 rc.stop();
-                return Err("rclone did not answer within 15 seconds".into());
+                return Err(("rclone did not answer within 15 seconds".into(), false));
             }
             std::thread::sleep(Duration::from_millis(150));
         }

@@ -52,11 +52,11 @@ Details: [THREAT_MODEL.md](THREAT_MODEL.md) · [SECURITY.md](SECURITY.md) · [de
 
 **Desktop app.** Download the installer for your system from [Releases](https://github.com/dezdickey/Decant/releases). rclone comes inside it. The installers are not code-signed yet (signing for Windows is planned for 2.5), so the first time you run one on Windows, a confirmation screen appears: choose **More info**, then **Run anyway**. On macOS, allow it in System Settings under Privacy & Security. Each release lists how to check a download is genuine before you run it.
 
-Until in-app sign-in arrives in 2.3, connect your cloud once with rclone itself:
+Until sign-in arrives inside the app, connect your cloud once with Decant's own copy of rclone. Decant shows the exact command for your computer. After a standard install it is:
 
-```
-rclone config
-```
+- **Windows**, in PowerShell: `& "$env:LOCALAPPDATA\Decant\decant-rclone.exe" config` with the setup `.exe`, or `& "C:\Program Files\Decant\decant-rclone.exe" config` with the `.msi`
+- **Linux:** `decant-rclone config`
+- **macOS:** `/Applications/Decant.app/Contents/MacOS/decant-rclone config`
 
 That is where you sign in to Google, Microsoft or another provider. Decant never sees your password.
 

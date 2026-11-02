@@ -110,9 +110,9 @@ const RC = (() => {
     return { title: 'Something went wrong', detail: raw, raw };
   }
 
-  // Desktop-only: the app's version and whether rclone started, and removing a
-  // verified file, to the Recycle Bin unless `permanent` (the core checks it
-  // lies inside `root` first).
+  // Desktop-only: the app's version, whether rclone started and where it is,
+  // and removing a verified file, to the Recycle Bin or Trash unless
+  // `permanent` (the core checks it lies inside `root` first).
   const info = tauri ? () => tauri.invoke('app_info') : null;
   const free = tauri ? (root, rel, permanent) => tauri.invoke('free_file', { root, rel, permanent: !!permanent }) : null;
 

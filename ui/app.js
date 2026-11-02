@@ -71,7 +71,7 @@
   const DRIVE_DAILY = 750 * 1024 ** 3;
 
   const state = {
-    os: '', version: '', appVersion: '',
+    os: '', version: '', appVersion: '', rclonePath: '',
     remotes: [],                 // { name, type, target }
     src: '', srcDisk: null, srcFiles: null, srcErr: null,
     dst: { remote: '', path: '' }, dstAbout: null, dstFiles: null, dstErr: null, dstNew: false,
@@ -86,6 +86,7 @@
   const dstFs = () => state.dst.remote ? state.dst.remote + ':' + state.dst.path : '';
   const dstLabel = () => state.dst.remote + ':' + (state.dst.path ? state.dst.path : '');
   const pairKey = () => state.src + '\n' + dstFs();
+  const binWord = () => Runs.binName(state.os);
 
   // ---- connection ----------------------------------------------------------
 
@@ -272,7 +273,8 @@
     const sum = $('dst-sum');
     sum.className = 'sum';
     if (!state.remotes.length) {
-      sum.replaceChildren('Connect a cloud once in a terminal with ', el('code', { text: 'rclone config' }), ', then reopen Decant.');
+      const c = Runs.connect(state.os, state.rclonePath);
+      sum.replaceChildren('Connect a cloud once: in ' + c.where + ', run ', el('code', { text: c.cmd }), ', then reopen Decant.');
       $('dst-disk').hidden = true; return;
     }
     if (state.dstErr) {
@@ -330,12 +332,14 @@
     const t = store.get('today', {});
     return t.date === new Date().toDateString() ? (t.bytes && t.bytes[remote]) || 0 : 0;
   }
+  // `n` is negative when a finished upload turns out to have added less than
+  // was sent along the way; the count never drops below zero.
   function addToday(remote, n) {
-    if (!(n > 0)) return;
+    if (!n || !isFinite(n)) return;
     const day = new Date().toDateString();
     let t = store.get('today', {});
     if (t.date !== day) t = { date: day, bytes: {} };
-    t.bytes[remote] = (t.bytes[remote] || 0) + n;
+    t.bytes[remote] = Math.max(0, (t.bytes[remote] || 0) + n);
     store.set('today', t);
   }
 
@@ -443,7 +447,8 @@
         _async: true,
       });
       watch({ kind: 'copy', id: r.jobid, exec: r.executeId, src: state.src, dst: dstFs(), remote: state.dst.remote,
-        label: dstLabel(), started: Date.now(), hintBytes: plan.sendBytes, hintFiles: plan.sendCount });
+        label: dstLabel(), started: Date.now(), hintBytes: plan.sendBytes, hintFiles: plan.sendCount,
+        before: { files: plan.thereCount, bytes: plan.thereBytes } });
     } catch (e) {
       const x = RC.explain(e);
       toast(x.title + '. ' + x.detail);
@@ -505,7 +510,7 @@
       store.set('job', job);
     }
     renderRun(job, st, stats);
-    if (st.finished) { finish(job, st, stats); return; }
+    if (st.finished) { await finish(job, st, stats); return; }
     pollTimer = setTimeout(poll, 1000);
   }
 
@@ -580,12 +585,38 @@
     if (!st.finished && stats.errors && stats.lastError) {
       const x = RC.explain(stats.lastError);
       note.replaceWith(Object.assign(noteBox('warn', x.title, x.detail + ' (' + Fmt.count(stats.errors, 'problem') + ' so far)'), { id: 'run-note' }));
+    } else if (!st.finished && copy && Runs.retrying(job.retry || (job.retry = {}), stats, Date.now())) {
+      const drive = remoteOf(job.remote) && remoteOf(job.remote).type === 'drive';
+      note.replaceWith(Object.assign(noteBox('warn', 'Uploads are being retried',
+        'Some files are being sent again. rclone waits and tries again by itself' +
+        (drive ? '. With Google Drive, giving your remote its own client ID keeps this rare (see the README).' : '.')), { id: 'run-note' }));
     } else if (!st.finished) {
       note.hidden = true;
     }
   }
 
-  function finish(job, st, stats) {
+  // After an upload, what really reached the cloud (see Runs.arrived). Both
+  // sides are listed again, reusing the destination's refresh when it is the
+  // one on screen. Null when a listing fails, or for a job started before
+  // Decant kept the "before" figures.
+  async function arrivedFor(job) {
+    const refresh = () => setDest(state.dst.remote, state.dst.path);
+    if (!job.before) { refresh(); return null; }
+    const files = (fs) => RC.call('operations/list', { fs, remote: '', opt: { recurse: true, filesOnly: true } }, { timeout: 180000 })
+      .then((r) => (r.list || []).map((f) => ({ path: f.Path, size: f.Size })));
+    try {
+      let dst = null;
+      if (job.dst === dstFs()) { await refresh(); if (job.dst === dstFs()) dst = state.dstFiles; }
+      else refresh();
+      if (!dst) dst = await files(job.dst);
+      const src = job.src === state.src && state.srcFiles ? state.srcFiles : await files(job.src);
+      return Runs.arrived(src, dst, job.before);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function finish(job, st, stats) {
     job.finished = true;
     store.set('job', null);
     const copy = job.kind === 'copy';
@@ -594,17 +625,24 @@
     let note;
     if (copy) {
       if (ok && stats.errors) ok = false;
+      aboutCache.delete(job.remote);
+      // rclone's figures count every byte sent, including files it had to
+      // send again; the record and the daily count keep what arrived.
+      const got = await arrivedFor(job);
+      const files = got ? got.files : stats.transfers || 0;
+      const bytes = got ? got.bytes : stats.bytes || 0;
+      if (got && remoteOf(job.remote) && remoteOf(job.remote).type === 'drive') addToday(job.remote, got.bytes - (job.seen || 0));
       if (ok) {
         note = noteBox('ok', 'All uploaded',
-          Fmt.count(stats.transfers || 0, 'file') + ', ' + Fmt.bytes(stats.bytes || 0) + ' in ' + Fmt.duration(st.duration) + '. Check the copies next, then you can free up the space.');
+          Fmt.count(files, 'file') + ', ' + Fmt.bytes(bytes) + ' in ' + Fmt.duration(st.duration) + '. Check the copies next, then you can free up the space.');
       } else {
         const x = RC.explain(st.error || stats.lastError || 'unknown');
         note = noteBox(/canceled/i.test(st.error || '') ? 'warn' : 'bad', x.title, x.detail);
       }
-      addHistory({ kind: 'copy', ok, src: job.src, dst: job.label, bytes: stats.bytes || 0, files: stats.transfers || 0,
+      addHistory({ kind: 'copy', ok, src: job.src, dst: job.label, bytes, files,
         secs: st.duration || 0, err: ok ? '' : RC.explain(st.error || stats.lastError || '').title });
-      aboutCache.delete(job.remote);
-      setDest(state.dst.remote, state.dst.path);
+      // A new upload may have started while the folders were listed.
+      if (state.job !== job) return;
     } else {
       if (!st.success) {
         const x = RC.explain(st.error || 'unknown');
@@ -745,10 +783,10 @@
       const bin = freeMode() === 'bin';
       const picked = [...listEl.querySelectorAll('input:checked')];
       const bytes = picked.reduce((a, i) => a + +i.dataset.size, 0);
-      $('free-total').textContent = Fmt.count(picked.length, 'file') + (bin ? ', ' + Fmt.bytes(bytes) + ' to the Recycle Bin' : ', frees ' + Fmt.bytes(bytes));
+      $('free-total').textContent = Fmt.count(picked.length, 'file') + (bin ? ', ' + Fmt.bytes(bytes) + ' to the ' + binWord() : ', frees ' + Fmt.bytes(bytes));
       $('free-warn').textContent = (bin
-        ? 'They move to the Recycle Bin, so they can be restored. The space comes back once you empty it.'
-        : 'They are deleted for good and do not go to the Recycle Bin.') +
+        ? 'They move to the ' + binWord() + ', so they can be restored. The space comes back once you empty it.'
+        : 'They are deleted for good and do not go to the ' + binWord() + '.') +
         ' The cloud copies stay as they are. Any file that has changed since it was checked (' + Fmt.ago(c.at) + ') is skipped.';
       $('free-ok-text').textContent = bin
         ? 'I understand these files are removed from this computer'
@@ -802,7 +840,7 @@
         } else {
           if (RC.desktop) await RC.free(state.src, path, !bin);
           else await RC.call('operations/deletefile', { fs: state.src, remote: path });
-          done++; freed += item.Size; st.textContent = bin ? 'in Recycle Bin' : 'deleted'; st.className = 'st badge there';
+          done++; freed += item.Size; st.textContent = bin ? 'in ' + binWord() : 'deleted'; st.className = 'st badge there';
         }
       } catch (e) {
         failed++; st.textContent = RC.explain(e).title; st.className = 'st badge bad';
@@ -819,10 +857,10 @@
       err: failed ? failed + ' could not be removed' : skipped ? skipped + ' changed and were kept' : '' });
     // What was removed cannot be freed again, and what changed needs checking
     // again before it can be.
-    const gone = new Set(picked.filter((b) => /deleted|Recycle Bin|changed/.test(b.closest('li').querySelector('.st').textContent)).map((b) => b.dataset.path));
+    const gone = new Set(picked.filter((b) => /deleted|Recycle Bin|Trash|changed/.test(b.closest('li').querySelector('.st').textContent)).map((b) => b.dataset.path));
     c.match = c.match.filter((p) => !gone.has(p));
     store.set('check', c);
-    toast(bin ? 'Moved ' + Fmt.bytes(freed) + ' to the Recycle Bin. Empty it to get the space back.' : 'Freed ' + Fmt.bytes(freed) + ' on this computer.');
+    toast(bin ? 'Moved ' + Fmt.bytes(freed) + ' to the ' + binWord() + '. Empty it to get the space back.' : 'Freed ' + Fmt.bytes(freed) + ' on this computer.');
     setSource(state.src);
   }
 
@@ -843,7 +881,7 @@
       const what = h.kind === 'check'
         ? Fmt.count(h.files || 0, 'file') + ' against ' + h.dst
         : h.kind === 'free'
-          ? Fmt.bytes(h.bytes) + ' from ' + Fmt.base(h.src) + (h.bin ? ' to the Recycle Bin' : '') + ' (' + Fmt.count(h.files || 0, 'file') + ')'
+          ? Fmt.bytes(h.bytes) + ' from ' + Fmt.base(h.src) + (h.bin ? ' to the ' + binWord() : '') + ' (' + Fmt.count(h.files || 0, 'file') + ')'
           : Fmt.bytes(h.bytes) + ' from ' + Fmt.base(h.src) + ' to ' + h.dst + (h.secs ? ' in ' + Fmt.duration(h.secs) : '');
       const word = h.kind === 'free' && h.bin ? 'Moved' : verb[h.kind];
       return el('li', null,
@@ -1001,6 +1039,7 @@
       const info = await RC.info();
       if (info.error) { gate(info.error); return; }
       state.appVersion = info.version || '';
+      state.rclonePath = info.rclone || '';
     }
     if (!RC.has) { gate('No session from the launcher was found next to this page.'); return; }
     try {
@@ -1012,6 +1051,9 @@
     }
     $('app').hidden = false;
     setConn('ok', versionText());
+    // Words that depend on the system: where freed files go, and an example folder.
+    $('src-path').placeholder = 'A folder, e.g. ' + Runs.examplePath(state.os);
+    for (const n of document.querySelectorAll('.bin-name')) n.textContent = binWord();
     wire();
     initOptions();
     try { await loadRemotes(); } catch (e) { toast(RC.explain(e).title); }

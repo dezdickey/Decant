@@ -69,12 +69,15 @@ async fn free_file(root: String, rel: String, permanent: bool) -> Result<(), Str
     .map_err(|e| e.to_string())?
 }
 
-/// What the page needs to know about the app it is running in.
+/// What the page needs to know about the app it is running in. That includes
+/// where the bundled rclone is, so the page can show the exact command for
+/// connecting a cloud: installing Decant does not put it on the command line.
 #[tauri::command]
 fn app_info(app: AppHandle, core: State<'_, Core>) -> Value {
     serde_json::json!({
         "version": app.package_info().version.to_string(),
         "error": core.start_error.lock().unwrap().clone(),
+        "rclone": rclone::bundled_binary().ok().map(|p| p.display().to_string()),
     })
 }
 

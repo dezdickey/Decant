@@ -2,6 +2,20 @@
 
 Each version is one stage of the [roadmap](ROADMAP.md). The format follows [Keep a Changelog](https://keepachangelog.com/), and versions follow [semantic versioning](https://semver.org/).
 
+## [2.0.1] — 2026-11-02 — Fixes from testing
+
+Fixes for the four issues found while testing 2.0.0 on Windows and Linux, and for a start-up race the automated tests hit once.
+
+### Fixed
+- **Recent and the "left today" figure now count only what reached the cloud.** After an upload, Decant lists the cloud folder and counts the files now there at the same size as on this computer, less those that were there before. rclone's own byte count includes every byte it had to send again, so after a retried run Recent could show far more than arrived ([#17](https://github.com/dezdickey/Decant/issues/17)).
+- **A warning while uploads are being retried.** A retry is not an error until rclone gives up, so an upload could sit at 100% with no sign of trouble. Decant now shows a warning when no file finishes for a minute while every file in flight is at 100%, or when more bytes go out than the files in flight hold ([#16](https://github.com/dezdickey/Decant/issues/16)).
+- **macOS and Linux say Trash, not Recycle Bin.** The folder box's example path matches the system too, like `/home/you/Videos` on Linux, and the bug report form gives the log's location on Linux ([#19](https://github.com/dezdickey/Decant/issues/19)).
+- **The first-run tip gives the exact command to connect a cloud.** It names Decant's own copy of rclone, because installing Decant doesn't add an rclone command. README's Getting started lists the same commands ([#20](https://github.com/dezdickey/Decant/issues/20)).
+- **If rclone stops while starting because another program took its port, the core starts it again on a new port.** The automated tests, which start several copies of rclone at once, hit this once.
+
+### Known issues
+- A dropped connection ends the upload instead of retrying it, and Decant doesn't keep the computer awake. See Limits in the README.
+
 ## [2.0.0] — 2026-10-28 — Desktop
 
 Decant becomes installable software for Windows, macOS and Linux, with rclone bundled.
