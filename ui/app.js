@@ -583,6 +583,11 @@
     if (!st.finished && stats.errors && stats.lastError) {
       const x = RC.explain(stats.lastError);
       note.replaceWith(Object.assign(noteBox('warn', x.title, x.detail + ' (' + Fmt.count(stats.errors, 'problem') + ' so far)'), { id: 'run-note' }));
+    } else if (!st.finished && copy && Runs.retrying(job.retry || (job.retry = {}), stats, Date.now())) {
+      const drive = remoteOf(job.remote) && remoteOf(job.remote).type === 'drive';
+      note.replaceWith(Object.assign(noteBox('warn', 'Uploads are being retried',
+        'Some files are being sent again. rclone waits and tries again by itself' +
+        (drive ? '. With Google Drive, giving your remote its own client ID keeps this rare (see the README).' : '.')), { id: 'run-note' }));
     } else if (!st.finished) {
       note.hidden = true;
     }
