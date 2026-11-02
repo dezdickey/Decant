@@ -71,7 +71,7 @@
   const DRIVE_DAILY = 750 * 1024 ** 3;
 
   const state = {
-    os: '', version: '', appVersion: '',
+    os: '', version: '', appVersion: '', rclonePath: '',
     remotes: [],                 // { name, type, target }
     src: '', srcDisk: null, srcFiles: null, srcErr: null,
     dst: { remote: '', path: '' }, dstAbout: null, dstFiles: null, dstErr: null, dstNew: false,
@@ -273,7 +273,8 @@
     const sum = $('dst-sum');
     sum.className = 'sum';
     if (!state.remotes.length) {
-      sum.replaceChildren('Connect a cloud once in a terminal with ', el('code', { text: 'rclone config' }), ', then reopen Decant.');
+      const c = Runs.connect(state.os, state.rclonePath);
+      sum.replaceChildren('Connect a cloud once: in ' + c.where + ', run ', el('code', { text: c.cmd }), ', then reopen Decant.');
       $('dst-disk').hidden = true; return;
     }
     if (state.dstErr) {
@@ -1038,6 +1039,7 @@
       const info = await RC.info();
       if (info.error) { gate(info.error); return; }
       state.appVersion = info.version || '';
+      state.rclonePath = info.rclone || '';
     }
     if (!RC.has) { gate('No session from the launcher was found next to this page.'); return; }
     try {
