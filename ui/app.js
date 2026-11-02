@@ -330,12 +330,14 @@
     const t = store.get('today', {});
     return t.date === new Date().toDateString() ? (t.bytes && t.bytes[remote]) || 0 : 0;
   }
+  // `n` is negative when a finished upload turns out to have added less than
+  // was sent along the way; the count never drops below zero.
   function addToday(remote, n) {
-    if (!(n > 0)) return;
+    if (!n || !isFinite(n)) return;
     const day = new Date().toDateString();
     let t = store.get('today', {});
     if (t.date !== day) t = { date: day, bytes: {} };
-    t.bytes[remote] = (t.bytes[remote] || 0) + n;
+    t.bytes[remote] = Math.max(0, (t.bytes[remote] || 0) + n);
     store.set('today', t);
   }
 
@@ -443,7 +445,8 @@
         _async: true,
       });
       watch({ kind: 'copy', id: r.jobid, exec: r.executeId, src: state.src, dst: dstFs(), remote: state.dst.remote,
-        label: dstLabel(), started: Date.now(), hintBytes: plan.sendBytes, hintFiles: plan.sendCount });
+        label: dstLabel(), started: Date.now(), hintBytes: plan.sendBytes, hintFiles: plan.sendCount,
+        before: { files: plan.thereCount, bytes: plan.thereBytes } });
     } catch (e) {
       const x = RC.explain(e);
       toast(x.title + '. ' + x.detail);
@@ -505,7 +508,7 @@
       store.set('job', job);
     }
     renderRun(job, st, stats);
-    if (st.finished) { finish(job, st, stats); return; }
+    if (st.finished) { await finish(job, st, stats); return; }
     pollTimer = setTimeout(poll, 1000);
   }
 
@@ -585,7 +588,28 @@
     }
   }
 
-  function finish(job, st, stats) {
+  // After an upload, what really reached the cloud (see Runs.arrived). Both
+  // sides are listed again, reusing the destination's refresh when it is the
+  // one on screen. Null when a listing fails, or for a job started before
+  // Decant kept the "before" figures.
+  async function arrivedFor(job) {
+    const refresh = () => setDest(state.dst.remote, state.dst.path);
+    if (!job.before) { refresh(); return null; }
+    const files = (fs) => RC.call('operations/list', { fs, remote: '', opt: { recurse: true, filesOnly: true } }, { timeout: 180000 })
+      .then((r) => (r.list || []).map((f) => ({ path: f.Path, size: f.Size })));
+    try {
+      let dst = null;
+      if (job.dst === dstFs()) { await refresh(); if (job.dst === dstFs()) dst = state.dstFiles; }
+      else refresh();
+      if (!dst) dst = await files(job.dst);
+      const src = job.src === state.src && state.srcFiles ? state.srcFiles : await files(job.src);
+      return Runs.arrived(src, dst, job.before);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function finish(job, st, stats) {
     job.finished = true;
     store.set('job', null);
     const copy = job.kind === 'copy';
@@ -594,17 +618,24 @@
     let note;
     if (copy) {
       if (ok && stats.errors) ok = false;
+      aboutCache.delete(job.remote);
+      // rclone's figures count every byte sent, including files it had to
+      // send again; the record and the daily count keep what arrived.
+      const got = await arrivedFor(job);
+      const files = got ? got.files : stats.transfers || 0;
+      const bytes = got ? got.bytes : stats.bytes || 0;
+      if (got && remoteOf(job.remote) && remoteOf(job.remote).type === 'drive') addToday(job.remote, got.bytes - (job.seen || 0));
       if (ok) {
         note = noteBox('ok', 'All uploaded',
-          Fmt.count(stats.transfers || 0, 'file') + ', ' + Fmt.bytes(stats.bytes || 0) + ' in ' + Fmt.duration(st.duration) + '. Check the copies next, then you can free up the space.');
+          Fmt.count(files, 'file') + ', ' + Fmt.bytes(bytes) + ' in ' + Fmt.duration(st.duration) + '. Check the copies next, then you can free up the space.');
       } else {
         const x = RC.explain(st.error || stats.lastError || 'unknown');
         note = noteBox(/canceled/i.test(st.error || '') ? 'warn' : 'bad', x.title, x.detail);
       }
-      addHistory({ kind: 'copy', ok, src: job.src, dst: job.label, bytes: stats.bytes || 0, files: stats.transfers || 0,
+      addHistory({ kind: 'copy', ok, src: job.src, dst: job.label, bytes, files,
         secs: st.duration || 0, err: ok ? '' : RC.explain(st.error || stats.lastError || '').title });
-      aboutCache.delete(job.remote);
-      setDest(state.dst.remote, state.dst.path);
+      // A new upload may have started while the folders were listed.
+      if (state.job !== job) return;
     } else {
       if (!st.success) {
         const x = RC.explain(st.error || 'unknown');
